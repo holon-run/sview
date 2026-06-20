@@ -30,5 +30,5 @@ fn emits_text_by_default() {
         .assert()
         .success()
         .stdout(predicate::str::contains("README.md (Markdown)"))
-        .stdout(predicate::str::contains("- file README.md [1-1]"));
+        .stdout(predicate::str::contains("- heading Title [1-1]"));
 }
