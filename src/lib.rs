@@ -60,6 +60,8 @@ pub fn analyze_source(
         Vec::new()
     } else if language == Language::Markdown {
         analyze_markdown(source, preview_len)
+    } else if language == Language::Rust {
+        analyze_rust(source, preview_len)
     } else {
         vec![Node {
             kind: "file".to_string(),
@@ -318,6 +320,212 @@ fn is_list_item(line: &str) -> bool {
         && rest.starts_with(' ')
 }
 
+fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
+    let mut items = Vec::<RustItem>::new();
+    let mut stack = Vec::<RustStackEntry>::new();
+    let mut brace_depth = 0usize;
+    let mut pending_attributes = Vec::<String>::new();
+
+    for (line_index, line) in source.lines().enumerate() {
+        let line_number = line_index + 1;
+        let trimmed = line.trim_start();
+
+        if trimmed.starts_with("#[") {
+            pending_attributes.push(trimmed.to_string());
+        } else if let Some((kind, name)) = parse_rust_item(trimmed, &pending_attributes) {
+            let parent = stack.last().map(|entry| entry.item_index);
+            let index = items.len();
+            let opens_block = line_contains_code_char(trimmed, '{');
+            items.push(RustItem {
+                parent,
+                node: Node {
+                    kind,
+                    level: None,
+                    name: Some(name),
+                    start_line: line_number,
+                    end_line: line_number,
+                    preview: Some(truncate_preview(trimmed, preview_len)),
+                    children: Vec::new(),
+                },
+            });
+
+            if opens_block {
+                stack.push(RustStackEntry {
+                    item_index: index,
+                    close_depth: brace_depth,
+                });
+            }
+
+            pending_attributes.clear();
+        } else if !trimmed.is_empty() && !trimmed.starts_with("//") {
+            pending_attributes.clear();
+        }
+
+        brace_depth = update_brace_depth(brace_depth, line);
+
+        while stack
+            .last()
+            .is_some_and(|entry| brace_depth <= entry.close_depth)
+        {
+            let entry = stack.pop().expect("stack entry exists");
+            items[entry.item_index].node.end_line = line_number;
+        }
+    }
+
+    let final_line = source.lines().count().max(1);
+    for entry in stack {
+        items[entry.item_index].node.end_line = final_line;
+    }
+
+    build_rust_tree(&items, None)
+}
+
+#[derive(Debug, Clone)]
+struct RustItem {
+    parent: Option<usize>,
+    node: Node,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RustStackEntry {
+    item_index: usize,
+    close_depth: usize,
+}
+
+fn build_rust_tree(items: &[RustItem], parent: Option<usize>) -> Vec<Node> {
+    items
+        .iter()
+        .enumerate()
+        .filter(|(_, item)| item.parent == parent)
+        .map(|(index, item)| {
+            let mut node = item.node.clone();
+            node.children = build_rust_tree(items, Some(index));
+            node
+        })
+        .collect()
+}
+
+fn parse_rust_item(line: &str, attributes: &[String]) -> Option<(String, String)> {
+    let line = strip_rust_visibility_and_modifiers(line);
+    if let Some(name) = rust_name_after_keyword(line, "mod") {
+        return Some(("module".to_string(), name));
+    }
+    if let Some(name) = rust_name_after_keyword(line, "struct") {
+        return Some(("struct".to_string(), name));
+    }
+    if let Some(name) = rust_name_after_keyword(line, "enum") {
+        return Some(("enum".to_string(), name));
+    }
+    if let Some(name) = rust_name_after_keyword(line, "trait") {
+        return Some(("trait".to_string(), name));
+    }
+    if line.starts_with("impl") && keyword_boundary(line, "impl") {
+        return Some(("impl".to_string(), rust_impl_name(line)));
+    }
+    if let Some(name) = rust_name_after_keyword(line, "fn") {
+        let kind = if attributes.iter().any(|attribute| {
+            attribute.starts_with("#[test") || attribute.starts_with("#[tokio::test")
+        }) {
+            "test"
+        } else {
+            "function"
+        };
+        return Some((kind.to_string(), name));
+    }
+
+    None
+}
+
+fn strip_rust_visibility_and_modifiers(mut line: &str) -> &str {
+    loop {
+        let trimmed = line.trim_start();
+        if let Some(rest) = trimmed.strip_prefix("pub ") {
+            line = rest;
+        } else if trimmed.starts_with("pub(") {
+            if let Some(end) = trimmed.find(") ") {
+                line = &trimmed[end + 2..];
+            } else {
+                return trimmed;
+            }
+        } else if let Some(rest) = trimmed.strip_prefix("async ") {
+            line = rest;
+        } else if let Some(rest) = trimmed.strip_prefix("const ") {
+            line = rest;
+        } else if let Some(rest) = trimmed.strip_prefix("unsafe ") {
+            line = rest;
+        } else {
+            return trimmed;
+        }
+    }
+}
+
+fn rust_name_after_keyword(line: &str, keyword: &str) -> Option<String> {
+    if !line.starts_with(keyword) || !keyword_boundary(line, keyword) {
+        return None;
+    }
+    let rest = line[keyword.len()..].trim_start();
+    let name = rest
+        .chars()
+        .take_while(|character| {
+            character.is_ascii_alphanumeric() || *character == '_' || *character == '!'
+        })
+        .collect::<String>();
+    (!name.is_empty()).then_some(name)
+}
+
+fn keyword_boundary(line: &str, keyword: &str) -> bool {
+    line[keyword.len()..]
+        .chars()
+        .next()
+        .is_some_and(|character| character.is_whitespace() || character == '<')
+}
+
+fn rust_impl_name(line: &str) -> String {
+    let signature = line
+        .split('{')
+        .next()
+        .unwrap_or(line)
+        .trim()
+        .trim_end_matches(';')
+        .trim();
+    truncate_preview(signature, 80)
+}
+
+fn update_brace_depth(mut depth: usize, line: &str) -> usize {
+    let mut chars = line.chars().peekable();
+    let mut in_string = false;
+    let mut escaped = false;
+
+    while let Some(character) = chars.next() {
+        if !in_string && character == '/' && chars.peek() == Some(&'/') {
+            break;
+        }
+        if character == '"' && !escaped {
+            in_string = !in_string;
+        }
+        if in_string {
+            escaped = character == '\\' && !escaped;
+            continue;
+        }
+        escaped = false;
+        match character {
+            '{' => depth += 1,
+            '}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+
+    depth
+}
+
+fn line_contains_code_char(line: &str, expected: char) -> bool {
+    line.split("//")
+        .next()
+        .unwrap_or(line)
+        .chars()
+        .any(|character| character == expected)
+}
+
 fn file_name(path: &str) -> String {
     Path::new(path)
         .file_name()
@@ -396,5 +604,26 @@ mod tests {
         assert_eq!(intro.children[1].name.as_deref(), Some("Details"));
         assert_eq!(intro.children[1].children[0].kind, "code_block");
         assert_eq!(view.nodes[2].name.as_deref(), Some("Next"));
+    }
+
+    #[test]
+    fn extracts_rust_items() {
+        let source = "pub mod api {\n    pub struct Client;\n\n    impl Client {\n        pub fn new() -> Self {\n            Self\n        }\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn creates_client() {}\n}\n";
+        let view = analyze_source("src/lib.rs", Language::Rust, source, 80);
+
+        let api = &view.nodes[0];
+        assert_eq!(api.kind, "module");
+        assert_eq!(api.name.as_deref(), Some("api"));
+        assert_eq!(api.start_line, 1);
+        assert_eq!(api.end_line, 9);
+        assert_eq!(api.children[0].kind, "struct");
+        assert_eq!(api.children[1].kind, "impl");
+        assert_eq!(api.children[1].children[0].kind, "function");
+        assert_eq!(api.children[1].children[0].name.as_deref(), Some("new"));
+
+        let tests = &view.nodes[1];
+        assert_eq!(tests.name.as_deref(), Some("tests"));
+        assert_eq!(tests.children[0].kind, "test");
+        assert_eq!(tests.children[0].name.as_deref(), Some("creates_client"));
     }
 }
