@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use serde::Serialize;
 use std::{fs, path::Path};
+use tree_sitter::{Node as AstNode, Parser};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct StructureView {
@@ -321,81 +322,23 @@ fn is_list_item(line: &str) -> bool {
 }
 
 fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
+    let mut parser = Parser::new();
+    parser
+        .set_language(&tree_sitter_rust::LANGUAGE.into())
+        .expect("tree-sitter Rust grammar is valid");
+    let Some(tree) = parser.parse(source, None) else {
+        return Vec::new();
+    };
+
     let mut items = Vec::<RustItem>::new();
-    let mut stack = Vec::<RustStackEntry>::new();
-    let mut brace_depth = 0usize;
-    let mut pending_attributes = Vec::<String>::new();
-    let mut pending_block = None::<RustStackEntry>;
-
-    for (line_index, line) in source.lines().enumerate() {
-        let line_number = line_index + 1;
-        let trimmed = line.trim_start();
-
-        if trimmed.starts_with("#[") {
-            pending_attributes.push(trimmed.to_string());
-        } else if let Some((kind, name)) = parse_rust_item(trimmed, &pending_attributes) {
-            let parent = stack.last().map(|entry| entry.item_index);
-            let index = items.len();
-            let opens_block = line_contains_code_char(trimmed, '{');
-            items.push(RustItem {
-                parent,
-                node: Node {
-                    kind,
-                    level: None,
-                    name: Some(name),
-                    start_line: line_number,
-                    end_line: line_number,
-                    preview: Some(truncate_preview(trimmed, preview_len)),
-                    children: Vec::new(),
-                },
-            });
-
-            if opens_block {
-                stack.push(RustStackEntry {
-                    item_index: index,
-                    close_depth: brace_depth,
-                });
-            } else if !trimmed.ends_with(';') {
-                pending_block = Some(RustStackEntry {
-                    item_index: index,
-                    close_depth: brace_depth,
-                });
-            }
-
-            pending_attributes.clear();
-        } else if !trimmed.is_empty() && !trimmed.starts_with("//") {
-            pending_attributes.clear();
-        }
-
-        if let Some(entry) = pending_block {
-            if line_contains_code_char(trimmed, '{') {
-                stack.push(entry);
-                pending_block = None;
-            } else if line_contains_code_char(trimmed, ';') {
-                items[entry.item_index].node.end_line = line_number;
-                pending_block = None;
-            }
-        }
-
-        brace_depth = update_brace_depth(brace_depth, line);
-
-        while stack
-            .last()
-            .is_some_and(|entry| brace_depth <= entry.close_depth)
-        {
-            let entry = stack.pop().expect("stack entry exists");
-            items[entry.item_index].node.end_line = line_number;
-        }
-    }
-
-    let final_line = source.lines().count().max(1);
-    if let Some(entry) = pending_block {
-        items[entry.item_index].node.end_line = final_line;
-    }
-    for entry in stack {
-        items[entry.item_index].node.end_line = final_line;
-    }
-
+    collect_rust_items(
+        tree.root_node(),
+        source,
+        preview_len,
+        None,
+        false,
+        &mut items,
+    );
     build_rust_tree(&items, None)
 }
 
@@ -403,12 +346,6 @@ fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
 struct RustItem {
     parent: Option<usize>,
     node: Node,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct RustStackEntry {
-    item_index: usize,
-    close_depth: usize,
 }
 
 fn build_rust_tree(items: &[RustItem], parent: Option<usize>) -> Vec<Node> {
@@ -424,143 +361,109 @@ fn build_rust_tree(items: &[RustItem], parent: Option<usize>) -> Vec<Node> {
         .collect()
 }
 
-fn parse_rust_item(line: &str, attributes: &[String]) -> Option<(String, String)> {
-    let line = strip_rust_visibility_and_modifiers(line);
-    if let Some(name) = rust_name_after_keyword(line, "mod") {
-        return Some(("module".to_string(), name));
-    }
-    if let Some(name) = rust_name_after_keyword(line, "struct") {
-        return Some(("struct".to_string(), name));
-    }
-    if let Some(name) = rust_name_after_keyword(line, "enum") {
-        return Some(("enum".to_string(), name));
-    }
-    if let Some(name) = rust_name_after_keyword(line, "trait") {
-        return Some(("trait".to_string(), name));
-    }
-    if line.starts_with("impl") && keyword_boundary(line, "impl") {
-        return Some(("impl".to_string(), rust_impl_name(line)));
-    }
-    if let Some(name) = rust_name_after_keyword(line, "fn") {
-        let kind = if attributes.iter().any(|attribute| {
-            attribute.starts_with("#[test") || attribute.starts_with("#[tokio::test")
-        }) {
-            "test"
+fn collect_rust_items(
+    ast_node: AstNode,
+    source: &str,
+    preview_len: usize,
+    parent: Option<usize>,
+    has_test_attribute: bool,
+    items: &mut Vec<RustItem>,
+) {
+    let current_parent =
+        if let Some(node) = rust_node_from_ast(ast_node, source, preview_len, has_test_attribute) {
+            let index = items.len();
+            items.push(RustItem { parent, node });
+            Some(index)
         } else {
-            "function"
+            parent
         };
-        return Some((kind.to_string(), name));
-    }
 
-    None
-}
-
-fn strip_rust_visibility_and_modifiers(mut line: &str) -> &str {
-    loop {
-        let trimmed = line.trim_start();
-        if let Some(rest) = trimmed.strip_prefix("pub ") {
-            line = rest;
-        } else if trimmed.starts_with("pub(") {
-            if let Some(end) = trimmed.find(") ") {
-                line = &trimmed[end + 2..];
-            } else {
-                return trimmed;
-            }
-        } else if let Some(rest) = trimmed.strip_prefix("async ") {
-            line = rest;
-        } else if let Some(rest) = trimmed.strip_prefix("const ") {
-            line = rest;
-        } else if let Some(rest) = trimmed.strip_prefix("unsafe ") {
-            line = rest;
-        } else {
-            return trimmed;
+    let mut cursor = ast_node.walk();
+    let mut pending_test_attribute = false;
+    for child in ast_node.named_children(&mut cursor) {
+        if child.kind() == "attribute_item" {
+            pending_test_attribute = rust_is_test_attribute(child, source);
+            continue;
         }
+
+        collect_rust_items(
+            child,
+            source,
+            preview_len,
+            current_parent,
+            pending_test_attribute,
+            items,
+        );
+        pending_test_attribute = false;
     }
 }
 
-fn rust_name_after_keyword(line: &str, keyword: &str) -> Option<String> {
-    if !line.starts_with(keyword) || !keyword_boundary(line, keyword) {
-        return None;
-    }
-    let rest = line[keyword.len()..].trim_start();
-    let name = rest
-        .chars()
-        .take_while(|character| {
-            character.is_ascii_alphanumeric() || *character == '_' || *character == '!'
-        })
-        .collect::<String>();
-    (!name.is_empty()).then_some(name)
+fn rust_node_from_ast(
+    ast_node: AstNode,
+    source: &str,
+    preview_len: usize,
+    has_test_attribute: bool,
+) -> Option<Node> {
+    let (kind, name) = match ast_node.kind() {
+        "mod_item" => ("module", rust_ast_name(ast_node, source)?),
+        "struct_item" => ("struct", rust_ast_name(ast_node, source)?),
+        "enum_item" => ("enum", rust_ast_name(ast_node, source)?),
+        "trait_item" => ("trait", rust_ast_name(ast_node, source)?),
+        "impl_item" => ("impl", rust_impl_ast_name(ast_node, source)),
+        "function_item" => {
+            let kind = if has_test_attribute {
+                "test"
+            } else {
+                "function"
+            };
+            (kind, rust_ast_name(ast_node, source)?)
+        }
+        _ => return None,
+    };
+
+    Some(Node {
+        kind: kind.to_string(),
+        level: None,
+        name: Some(name),
+        start_line: ast_node.start_position().row + 1,
+        end_line: ast_node.end_position().row + 1,
+        preview: rust_ast_preview(ast_node, source, preview_len),
+        children: Vec::new(),
+    })
 }
 
-fn keyword_boundary(line: &str, keyword: &str) -> bool {
-    line[keyword.len()..]
-        .chars()
-        .next()
-        .is_some_and(|character| character.is_whitespace() || character == '<')
+fn rust_ast_name(ast_node: AstNode, source: &str) -> Option<String> {
+    ast_node
+        .child_by_field_name("name")
+        .and_then(|node| node.utf8_text(source.as_bytes()).ok())
+        .map(ToString::to_string)
 }
 
-fn rust_impl_name(line: &str) -> String {
-    let signature = line
+fn rust_impl_ast_name(ast_node: AstNode, source: &str) -> String {
+    let text = ast_node.utf8_text(source.as_bytes()).unwrap_or("impl");
+    let signature = text
         .split('{')
         .next()
-        .unwrap_or(line)
+        .unwrap_or(text)
         .trim()
         .trim_end_matches(';')
         .trim();
     truncate_preview(signature, 80)
 }
 
-fn update_brace_depth(mut depth: usize, line: &str) -> usize {
-    let mut chars = line.chars().peekable();
-    let mut in_string = false;
-    let mut in_char = false;
-    let mut escaped = false;
-
-    while let Some(character) = chars.next() {
-        if !in_string && !in_char && character == '/' && chars.peek() == Some(&'/') {
-            break;
-        }
-
-        if escaped {
-            escaped = false;
-            continue;
-        }
-        if in_string || in_char {
-            if character == '\\' {
-                escaped = true;
-            } else if in_string && character == '"' {
-                in_string = false;
-            } else if in_char && character == '\'' {
-                in_char = false;
-            }
-            continue;
-        }
-
-        if character == '"' {
-            in_string = true;
-            continue;
-        }
-        if character == '\'' {
-            in_char = true;
-            continue;
-        }
-
-        match character {
-            '{' => depth += 1,
-            '}' => depth = depth.saturating_sub(1),
-            _ => {}
-        }
-    }
-
-    depth
+fn rust_is_test_attribute(ast_node: AstNode, source: &str) -> bool {
+    ast_node
+        .utf8_text(source.as_bytes())
+        .is_ok_and(|text| text.starts_with("#[test") || text.starts_with("#[tokio::test"))
 }
 
-fn line_contains_code_char(line: &str, expected: char) -> bool {
-    line.split("//")
-        .next()
-        .unwrap_or(line)
-        .chars()
-        .any(|character| character == expected)
+fn rust_ast_preview(ast_node: AstNode, source: &str, preview_len: usize) -> Option<String> {
+    source
+        .lines()
+        .nth(ast_node.start_position().row)
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(|line| truncate_preview(line, preview_len))
 }
 
 fn file_name(path: &str) -> String {
