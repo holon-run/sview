@@ -132,6 +132,15 @@ cargo run --quiet -- src/lib.rs --depth 1 --max-nodes 40
 cargo run --quiet -- src/lib.rs --json --depth 2
 ```
 
+Text output is a compact tree outline:
+
+```text
+src/main.rs (rust)
+├─ struct Cli L8-31 — struct Cli {
+├─ enum OutputFormat L34-37 — enum OutputFormat {
+└─ function main L39-54 — fn main() -> Result<()> {
+```
+
 The intended workflow is:
 
 1. run `sview` to get stable `start_line` / `end_line` ranges;

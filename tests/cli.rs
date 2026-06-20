@@ -29,6 +29,6 @@ fn emits_text_by_default() {
         .arg(path.to_str().unwrap())
         .assert()
         .success()
-        .stdout(predicate::str::contains("README.md (Markdown)"))
-        .stdout(predicate::str::contains("- heading Title [1-1]"));
+        .stdout(predicate::str::contains("README.md (markdown)"))
+        .stdout(predicate::str::contains("└─ heading Title L1-1"));
 }

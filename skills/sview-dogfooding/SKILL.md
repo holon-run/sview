@@ -16,6 +16,15 @@ cargo run --quiet -- src/lib.rs --depth 1 --max-nodes 40
 cargo run --quiet -- path/to/file.rs --json --depth 2
 ```
 
+Default text output is a compact tree outline, for example:
+
+```text
+src/main.rs (rust)
+├─ struct Cli L8-31 — struct Cli {
+├─ enum OutputFormat L34-37 — enum OutputFormat {
+└─ function main L39-54 — fn main() -> Result<()> {
+```
+
 Use the reported `start_line` / `end_line` ranges to choose the next focused `sed -n '<start>,<end>p'` or patch target.
 
 ## Expectations

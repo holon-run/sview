@@ -83,11 +83,19 @@ pub fn analyze_source(
 }
 
 pub fn render_text(view: &StructureView, options: &RenderOptions) -> String {
-    let mut out = format!("{} ({:?})\n", view.path, view.language);
+    let mut out = format!("{} ({})\n", view.path, language_label(view.language));
     let mut remaining = options.max_nodes;
 
-    for node in &view.nodes {
-        render_node(node, 0, options, &mut remaining, &mut out);
+    for (index, node) in view.nodes.iter().enumerate() {
+        render_node(
+            node,
+            "",
+            index + 1 == view.nodes.len(),
+            0,
+            options,
+            &mut remaining,
+            &mut out,
+        );
         if remaining == 0 {
             out.push_str("...\n");
             break;
@@ -106,8 +114,18 @@ pub fn detect_language(path: &Path, source: &str) -> Language {
     }
 }
 
+fn language_label(language: Language) -> &'static str {
+    match language {
+        Language::Markdown => "markdown",
+        Language::Rust => "rust",
+        Language::Unknown => "unknown",
+    }
+}
+
 fn render_node(
     node: &Node,
+    prefix: &str,
+    is_last: bool,
     depth: usize,
     options: &RenderOptions,
     remaining: &mut usize,
@@ -118,22 +136,49 @@ fn render_node(
     }
 
     *remaining -= 1;
-    let indent = "  ".repeat(depth);
     let name = node.name.as_deref().unwrap_or("<anonymous>");
+    let connector = if is_last { "└─" } else { "├─" };
     out.push_str(&format!(
-        "{indent}- {} {name} [{}-{}]",
+        "{prefix}{connector} {} {name} L{}-{}",
         node.kind, node.start_line, node.end_line
     ));
-    if let Some(preview) = &node.preview {
-        out.push_str(&format!(" :: {preview}"));
+    if let Some(preview) = text_preview(node) {
+        out.push_str(&format!(" — {preview}"));
     }
     out.push('\n');
 
-    for child in &node.children {
-        render_node(child, depth + 1, options, remaining, out);
+    let child_prefix = format!("{prefix}{}", if is_last { "   " } else { "│  " });
+    for (index, child) in node.children.iter().enumerate() {
+        render_node(
+            child,
+            &child_prefix,
+            index + 1 == node.children.len(),
+            depth + 1,
+            options,
+            remaining,
+            out,
+        );
         if *remaining == 0 {
             break;
         }
+    }
+}
+
+fn text_preview(node: &Node) -> Option<&str> {
+    let preview = node.preview.as_deref()?.trim();
+    let name = node.name.as_deref().unwrap_or_default();
+    if preview.is_empty()
+        || preview == name
+        || preview
+            .trim_start_matches('#')
+            .trim()
+            .trim_end_matches('#')
+            .trim()
+            == name
+    {
+        None
+    } else {
+        Some(preview)
     }
 }
 
@@ -544,6 +589,24 @@ mod tests {
         assert_eq!(intro.children[1].name.as_deref(), Some("Details"));
         assert_eq!(intro.children[1].children[0].kind, "code_block");
         assert_eq!(view.nodes[2].name.as_deref(), Some("Next"));
+    }
+
+    #[test]
+    fn renders_text_as_tree_outline() {
+        let source = "# Intro\n\n## Details\n";
+        let view = analyze_source("README.md", Language::Markdown, source, 40);
+        let output = render_text(
+            &view,
+            &RenderOptions {
+                max_depth: None,
+                max_nodes: 20,
+            },
+        );
+
+        assert_eq!(
+            output,
+            "README.md (markdown)\n└─ heading Intro L1-3\n   └─ heading Details L3-3\n"
+        );
     }
 
     #[test]
