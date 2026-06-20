@@ -122,6 +122,22 @@ A useful MVP can stay very small:
 4. Compact text output for quick terminal use.
 5. Real dogfooding inside agent tasks that currently require large-file inspection.
 
+## Dogfooding
+
+During development, use the local binary before broad file reads:
+
+```bash
+cargo run --quiet -- README.md --depth 2
+cargo run --quiet -- src/lib.rs --depth 1 --max-nodes 40
+cargo run --quiet -- src/lib.rs --json --depth 2
+```
+
+The intended workflow is:
+
+1. run `sview` to get stable `start_line` / `end_line` ranges;
+2. read only the relevant range with a focused command such as `sed -n '120,180p'`;
+3. patch or inspect the exact range, then rerun `sview` or tests if structure changed.
+
 ## Possible implementation approach
 
 Rust is the preferred implementation language because `sview` should behave like local developer tools such as `rg`, `bat`, or `ast-grep`:

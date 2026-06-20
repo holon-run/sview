@@ -325,6 +325,7 @@ fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
     let mut stack = Vec::<RustStackEntry>::new();
     let mut brace_depth = 0usize;
     let mut pending_attributes = Vec::<String>::new();
+    let mut pending_block = None::<RustStackEntry>;
 
     for (line_index, line) in source.lines().enumerate() {
         let line_number = line_index + 1;
@@ -354,11 +355,26 @@ fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
                     item_index: index,
                     close_depth: brace_depth,
                 });
+            } else if !trimmed.ends_with(';') {
+                pending_block = Some(RustStackEntry {
+                    item_index: index,
+                    close_depth: brace_depth,
+                });
             }
 
             pending_attributes.clear();
         } else if !trimmed.is_empty() && !trimmed.starts_with("//") {
             pending_attributes.clear();
+        }
+
+        if let Some(entry) = pending_block {
+            if line_contains_code_char(trimmed, '{') {
+                stack.push(entry);
+                pending_block = None;
+            } else if line_contains_code_char(trimmed, ';') {
+                items[entry.item_index].node.end_line = line_number;
+                pending_block = None;
+            }
         }
 
         brace_depth = update_brace_depth(brace_depth, line);
@@ -373,6 +389,9 @@ fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
     }
 
     let final_line = source.lines().count().max(1);
+    if let Some(entry) = pending_block {
+        items[entry.item_index].node.end_line = final_line;
+    }
     for entry in stack {
         items[entry.item_index].node.end_line = final_line;
     }
@@ -494,20 +513,38 @@ fn rust_impl_name(line: &str) -> String {
 fn update_brace_depth(mut depth: usize, line: &str) -> usize {
     let mut chars = line.chars().peekable();
     let mut in_string = false;
+    let mut in_char = false;
     let mut escaped = false;
 
     while let Some(character) = chars.next() {
-        if !in_string && character == '/' && chars.peek() == Some(&'/') {
+        if !in_string && !in_char && character == '/' && chars.peek() == Some(&'/') {
             break;
         }
-        if character == '"' && !escaped {
-            in_string = !in_string;
-        }
-        if in_string {
-            escaped = character == '\\' && !escaped;
+
+        if escaped {
+            escaped = false;
             continue;
         }
-        escaped = false;
+        if in_string || in_char {
+            if character == '\\' {
+                escaped = true;
+            } else if in_string && character == '"' {
+                in_string = false;
+            } else if in_char && character == '\'' {
+                in_char = false;
+            }
+            continue;
+        }
+
+        if character == '"' {
+            in_string = true;
+            continue;
+        }
+        if character == '\'' {
+            in_char = true;
+            continue;
+        }
+
         match character {
             '{' => depth += 1,
             '}' => depth = depth.saturating_sub(1),
@@ -620,10 +657,32 @@ mod tests {
         assert_eq!(api.children[1].kind, "impl");
         assert_eq!(api.children[1].children[0].kind, "function");
         assert_eq!(api.children[1].children[0].name.as_deref(), Some("new"));
+        assert_eq!(api.children[1].children[0].end_line, 7);
 
         let tests = &view.nodes[1];
         assert_eq!(tests.name.as_deref(), Some("tests"));
         assert_eq!(tests.children[0].kind, "test");
         assert_eq!(tests.children[0].name.as_deref(), Some("creates_client"));
+    }
+
+    #[test]
+    fn tracks_multiline_rust_signatures() {
+        let source = "pub fn build(\n    input: String,\n) -> String {\n    input\n}\n";
+        let view = analyze_source("src/lib.rs", Language::Rust, source, 80);
+
+        assert_eq!(view.nodes[0].kind, "function");
+        assert_eq!(view.nodes[0].name.as_deref(), Some("build"));
+        assert_eq!(view.nodes[0].start_line, 1);
+        assert_eq!(view.nodes[0].end_line, 5);
+    }
+
+    #[test]
+    fn braces_in_char_literals_do_not_hide_closing_blocks() {
+        let source = "fn contains_quote() {\n    let quote = '\"';\n}\nfn next() {}\n";
+        let view = analyze_source("src/lib.rs", Language::Rust, source, 80);
+
+        assert_eq!(view.nodes[0].name.as_deref(), Some("contains_quote"));
+        assert_eq!(view.nodes[0].end_line, 3);
+        assert_eq!(view.nodes[1].name.as_deref(), Some("next"));
     }
 }
