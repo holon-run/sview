@@ -588,4 +588,35 @@ mod tests {
         assert_eq!(view.nodes[0].end_line, 3);
         assert_eq!(view.nodes[1].name.as_deref(), Some("next"));
     }
+
+    #[test]
+    fn extracts_rust_ast_fixture_shapes() {
+        let source = "macro_rules! make_client { () => {}; }\n\n#[derive(Debug)]\npub struct Client {\n    value: String,\n}\n\npub enum Mode { Fast, Slow }\n\npub trait Service {\n    fn call(&self);\n}\n\nimpl Client {\n    pub async fn build(\n        value: String,\n    ) -> Self {\n        make_client!();\n        Self { value }\n    }\n}\n\nmod tests {\n    #[tokio::test(flavor = \"current_thread\")]\n    async fn builds_client() {}\n}\n";
+        let view = analyze_source("src/lib.rs", Language::Rust, source, 80);
+
+        assert_eq!(view.nodes[0].kind, "struct");
+        assert_eq!(view.nodes[0].name.as_deref(), Some("Client"));
+        assert_eq!(view.nodes[0].start_line, 4);
+        assert_eq!(view.nodes[0].end_line, 6);
+        assert_eq!(view.nodes[1].kind, "enum");
+        assert_eq!(view.nodes[1].name.as_deref(), Some("Mode"));
+        assert_eq!(view.nodes[2].kind, "trait");
+        assert_eq!(view.nodes[2].name.as_deref(), Some("Service"));
+
+        let impl_node = &view.nodes[3];
+        assert_eq!(impl_node.kind, "impl");
+        assert_eq!(impl_node.name.as_deref(), Some("impl Client"));
+        assert_eq!(impl_node.start_line, 14);
+        assert_eq!(impl_node.end_line, 21);
+        assert_eq!(impl_node.children[0].kind, "function");
+        assert_eq!(impl_node.children[0].name.as_deref(), Some("build"));
+        assert_eq!(impl_node.children[0].start_line, 15);
+        assert_eq!(impl_node.children[0].end_line, 20);
+
+        let tests = &view.nodes[4];
+        assert_eq!(tests.kind, "module");
+        assert_eq!(tests.name.as_deref(), Some("tests"));
+        assert_eq!(tests.children[0].kind, "test");
+        assert_eq!(tests.children[0].name.as_deref(), Some("builds_client"));
+    }
 }

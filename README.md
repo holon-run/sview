@@ -21,9 +21,9 @@ agent -> sview -> compact structure view -> targeted reads / patches
 
 ## Project status
 
-Status: **early project definition**.
+Status: **MVP implementation**.
 
-The current repository intentionally does not contain a Rust crate skeleton yet. The next step is to turn this definition into a minimal CLI once the first output contract is stable enough.
+The current crate provides a working Rust CLI with Markdown and Rust structure views. Rust parsing uses `tree-sitter-rust`; Markdown parsing is still a lightweight line-oriented outline.
 
 ## Design goals
 
@@ -149,14 +149,31 @@ Rust is the preferred implementation language because `sview` should behave like
 - easy JSON output;
 - suitable for repeated agent subprocess calls.
 
-Likely future dependencies, once the crate is created:
+Current implementation dependencies:
 
 - `clap` for CLI parsing;
 - `serde` / `serde_json` for output contracts;
-- `tree-sitter` grammars for code outlines;
-- `pulldown-cmark` or a Markdown parser for document outlines.
+- `tree-sitter` and `tree-sitter-rust` for Rust code outlines.
 
-These are intentionally not added yet.
+Possible future dependencies include more `tree-sitter` grammars for additional languages and `pulldown-cmark` or another Markdown parser for richer document outlines.
+
+## Development and coverage
+
+Run the normal verification before submitting changes:
+
+```bash
+cargo fmt -- --check
+cargo test
+```
+
+Coverage is tracked with [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov):
+
+```bash
+cargo install cargo-llvm-cov
+cargo llvm-cov --workspace --all-targets --summary-only
+```
+
+Initial coverage target: keep the core library line coverage at **70% or higher** while the project is small, and raise the bar once more language parsers and fixtures land.
 
 ## Relationship to other tools
 
@@ -172,15 +189,14 @@ agent -> sview -> tree-sitter / markdown parser / ast-grep / LSP / compiler
 
 ## Repository layout
 
-Planned, not created yet:
-
 ```text
 .
 ├── README.md
 ├── Cargo.toml
 ├── src/
+│   ├── lib.rs
 │   └── main.rs
+├── skills/
+│   └── sview-dogfooding/
 └── tests/
 ```
-
-The crate layout should be added only when implementation begins.
