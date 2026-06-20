@@ -55,7 +55,9 @@ The exact interface is still provisional, but the tool should be shaped around s
 
 ```bash
 sview README.md
+sview README.md src/lib.rs
 sview README.md --json
+sview README.md src/lib.rs --json
 sview src/lib.rs --json
 sview src/lib.rs --depth 2
 sview src/lib.rs --ranges
@@ -64,7 +66,7 @@ sview src/lib.rs --format agent
 
 The first stable version should probably support:
 
-- one input file per invocation;
+- one or more input files per invocation;
 - automatic language detection from path and content;
 - JSON output;
 - optional compact text output;
@@ -128,6 +130,7 @@ During development, use the local binary before broad file reads:
 
 ```bash
 cargo run --quiet -- README.md --depth 2
+cargo run --quiet -- README.md src/lib.rs --depth 1
 cargo run --quiet -- src/lib.rs --depth 1 --max-nodes 40
 cargo run --quiet -- src/lib.rs --json --depth 2
 ```
@@ -143,7 +146,7 @@ src/main.rs (rust)
 
 The intended workflow is:
 
-1. run `sview` to get stable `start_line` / `end_line` ranges;
+1. run `sview` on one or more candidate files to get stable line ranges;
 2. read only the relevant range with a focused command such as `sed -n '120,180p'`;
 3. patch or inspect the exact range, then rerun `sview` or tests if structure changed.
 

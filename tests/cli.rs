@@ -32,3 +32,39 @@ fn emits_text_by_default() {
         .stdout(predicate::str::contains("README.md (markdown)"))
         .stdout(predicate::str::contains("└─ heading Title L1-1"));
 }
+
+#[test]
+fn emits_text_for_multiple_files() {
+    let dir = tempdir().unwrap();
+    let readme = dir.path().join("README.md");
+    let lib = dir.path().join("lib.rs");
+    fs::write(&readme, "# Title\n").unwrap();
+    fs::write(&lib, "pub struct Client;\n").unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .args([readme.to_str().unwrap(), lib.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("README.md (markdown)"))
+        .stdout(predicate::str::contains("lib.rs (rust)"))
+        .stdout(predicate::str::contains("└─ struct Client L1-1"));
+}
+
+#[test]
+fn emits_json_array_for_multiple_files() {
+    let dir = tempdir().unwrap();
+    let readme = dir.path().join("README.md");
+    let lib = dir.path().join("lib.rs");
+    fs::write(&readme, "# Title\n").unwrap();
+    fs::write(&lib, "pub struct Client;\n").unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .args([readme.to_str().unwrap(), lib.to_str().unwrap(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::starts_with("["))
+        .stdout(predicate::str::contains("\"language\": \"markdown\""))
+        .stdout(predicate::str::contains("\"language\": \"rust\""));
+}

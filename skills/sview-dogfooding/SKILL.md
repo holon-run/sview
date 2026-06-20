@@ -12,6 +12,7 @@ Use `sview` before broad text reads when a Markdown or Rust file may be large en
 
 ```bash
 cargo run --quiet -- README.md --depth 2
+cargo run --quiet -- README.md src/lib.rs --depth 1
 cargo run --quiet -- src/lib.rs --depth 1 --max-nodes 40
 cargo run --quiet -- path/to/file.rs --json --depth 2
 ```

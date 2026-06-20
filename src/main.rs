@@ -6,8 +6,9 @@ use sview::{analyze_file, render_text, RenderOptions};
 #[derive(Debug, Parser)]
 #[command(version, about)]
 struct Cli {
-    /// File to inspect.
-    path: PathBuf,
+    /// Files to inspect.
+    #[arg(required = true, num_args = 1..)]
+    paths: Vec<PathBuf>,
 
     /// Emit JSON output. Equivalent to `--format json`.
     #[arg(long, conflicts_with = "format")]
@@ -38,16 +39,29 @@ enum OutputFormat {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let view = analyze_file(&cli.path, cli.preview_len)?;
+    let views = cli
+        .paths
+        .iter()
+        .map(|path| analyze_file(path, cli.preview_len))
+        .collect::<Result<Vec<_>>>()?;
     let options = RenderOptions {
         max_depth: cli.depth,
         max_nodes: cli.max_nodes,
     };
 
     if cli.json || matches!(cli.format, OutputFormat::Json) {
-        println!("{}", serde_json::to_string_pretty(&view)?);
+        if views.len() == 1 {
+            println!("{}", serde_json::to_string_pretty(&views[0])?);
+        } else {
+            println!("{}", serde_json::to_string_pretty(&views)?);
+        }
     } else {
-        print!("{}", render_text(&view, &options));
+        for (index, view) in views.iter().enumerate() {
+            if index > 0 {
+                println!();
+            }
+            print!("{}", render_text(view, &options));
+        }
     }
 
     Ok(())
