@@ -132,6 +132,8 @@ During development, use the local binary before broad file reads:
 cargo run --quiet -- README.md --depth 2
 cargo run --quiet -- README.md src/lib.rs --depth 1
 cargo run --quiet -- src/lib.rs --depth 1 --max-nodes 40
+cargo run --quiet -- tests/fixtures/typescript_sample.ts --depth 2
+cargo run --quiet -- tests/fixtures/javascript_sample.js tests/fixtures/tsx_sample.tsx --json
 cargo run --quiet -- src/lib.rs --json --depth 2
 ```
 
@@ -142,6 +144,17 @@ src/main.rs (rust)
 ├─ struct Cli L8-31 — struct Cli {
 ├─ enum OutputFormat L34-37 — enum OutputFormat {
 └─ function main L39-54 — fn main() -> Result<()> {
+```
+
+TypeScript output uses the same shape:
+
+```text
+tests/fixtures/typescript_sample.ts (typescript)
+├─ interface User L1-3 — export interface User {
+├─ type UserId L5-5 — type UserId = string;
+├─ enum Mode L7-10 — enum Mode {
+└─ class Service L12-16 — export class Service {
+   └─ method load L13-15 — async load(id: UserId): Promise<User> {
 ```
 
 The intended workflow is:

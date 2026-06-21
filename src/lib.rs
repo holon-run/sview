@@ -47,6 +47,22 @@ mod tests {
     }
 
     #[test]
+    fn serializes_language_labels() {
+        assert_eq!(
+            serde_json::to_string(&Language::JavaScript).unwrap(),
+            "\"javascript\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Language::TypeScript).unwrap(),
+            "\"typescript\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Language::Tsx).unwrap(),
+            "\"typescript\""
+        );
+    }
+
+    #[test]
     fn truncates_preview_on_character_boundary() {
         assert_eq!(truncate_preview("abcdef", 4), "abc…");
         assert_eq!(truncate_preview("ab", 4), "ab");
