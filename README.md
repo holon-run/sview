@@ -21,13 +21,30 @@ agent -> sview -> compact structure view -> targeted reads / patches
 
 ## Project status
 
-Status: **0.1.0 release candidate**.
+Status: **0.1.x released CLI**.
 
 The current crate provides a working Rust CLI with Markdown, Rust, JavaScript, and TypeScript structure views. Rust and JS/TS parsing use tree-sitter grammars; Markdown parsing is still a lightweight line-oriented outline.
 
 ## Installation
 
-Install the released CLI from crates.io:
+Install the latest release with Homebrew on macOS:
+
+```bash
+brew tap holon-run/tap
+brew install sview
+```
+
+Or download a prebuilt binary from [GitHub Releases](https://github.com/holon-run/sview/releases/latest):
+
+```bash
+curl -L https://github.com/holon-run/sview/releases/latest/download/sview-linux-amd64.tar.gz | tar -xz
+chmod +x sview
+./sview --help
+```
+
+Use `sview-darwin-amd64.tar.gz` or `sview-darwin-arm64.tar.gz` on macOS.
+
+You can also install the released CLI from crates.io:
 
 ```bash
 cargo install sview
@@ -142,12 +159,12 @@ A useful MVP can stay very small:
 Use `sview` before broad file reads to get a compact outline and choose targeted follow-up ranges:
 
 ```bash
-cargo run --quiet -- README.md --depth 2
-cargo run --quiet -- README.md src/lib.rs --depth 1
-cargo run --quiet -- src/lib.rs --depth 1 --max-nodes 40
-cargo run --quiet -- tests/fixtures/typescript_sample.ts --depth 2
-cargo run --quiet -- tests/fixtures/javascript_sample.js tests/fixtures/tsx_sample.tsx --json
-cargo run --quiet -- src/lib.rs --json --depth 2
+sview README.md --depth 2
+sview README.md src/lib.rs --depth 1
+sview src/lib.rs --depth 1 --max-nodes 40
+sview tests/fixtures/typescript_sample.ts --depth 2
+sview tests/fixtures/javascript_sample.js tests/fixtures/tsx_sample.tsx --json
+sview src/lib.rs --json --depth 2
 ```
 
 Text output is a compact tree outline:
@@ -227,6 +244,10 @@ cargo publish --dry-run
 ```
 
 The crate is licensed under Apache-2.0. Release tags use the `vMAJOR.MINOR.PATCH` form, for example `v0.1.0`.
+
+Pushing a release tag runs the GitHub release workflow. It uploads Linux amd64,
+macOS amd64, and macOS arm64 tarballs plus `checksums.txt`, and generates a
+Homebrew formula for `holon-run/homebrew-tap` when the tap token is configured.
 
 ## Relationship to other tools
 

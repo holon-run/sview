@@ -4,6 +4,32 @@ Use `sview` to generate structured outlines for source code and Markdown files, 
 
 Use `sview` before broad text reads when a Markdown, Rust, JavaScript, or TypeScript file may be large enough that an outline can guide a targeted follow-up range.
 
+## Install
+
+Prefer the released binary when using this skill outside the `sview` repository:
+
+```bash
+brew tap holon-run/tap
+brew install sview
+```
+
+Or download a prebuilt archive from GitHub Releases:
+
+```bash
+curl -L https://github.com/holon-run/sview/releases/latest/download/sview-linux-amd64.tar.gz | tar -xz
+chmod +x sview
+./sview --help
+```
+
+Use `sview-darwin-amd64.tar.gz` or `sview-darwin-arm64.tar.gz` on macOS.
+
+Other install paths:
+
+```bash
+cargo install sview
+cargo install --path .
+```
+
 ## When to use
 
 - Before reading an unfamiliar Markdown, Rust, JavaScript, or TypeScript file end-to-end.
@@ -13,12 +39,12 @@ Use `sview` before broad text reads when a Markdown, Rust, JavaScript, or TypeSc
 ## Commands
 
 ```bash
-cargo run --quiet -- README.md --depth 2
-cargo run --quiet -- README.md src/lib.rs --depth 1
-cargo run --quiet -- src/lib.rs --depth 1 --max-nodes 40
-cargo run --quiet -- tests/fixtures/typescript_sample.ts --depth 2
-cargo run --quiet -- tests/fixtures/javascript_sample.js tests/fixtures/tsx_sample.tsx --json
-cargo run --quiet -- path/to/file.rs --json --depth 2
+sview README.md --depth 2
+sview README.md src/lib.rs --depth 1
+sview src/lib.rs --depth 1 --max-nodes 40
+sview tests/fixtures/typescript_sample.ts --depth 2
+sview tests/fixtures/javascript_sample.js tests/fixtures/tsx_sample.tsx --json
+sview path/to/file.rs --json --depth 2
 ```
 
 Default text output is a compact tree outline, for example:
