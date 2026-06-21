@@ -4,6 +4,7 @@ mod markdown;
 mod model;
 mod render;
 mod rust;
+mod tree;
 mod util;
 
 pub use analyzer::{analyze_file, analyze_source, detect_language};
