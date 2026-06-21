@@ -1,4 +1,5 @@
 mod analyzer;
+mod javascript;
 mod markdown;
 mod model;
 mod render;
@@ -21,6 +22,15 @@ mod tests {
             detect_language(Path::new("README.md"), ""),
             Language::Markdown
         );
+        assert_eq!(
+            detect_language(Path::new("src/app.js"), ""),
+            Language::JavaScript
+        );
+        assert_eq!(
+            detect_language(Path::new("src/app.ts"), ""),
+            Language::TypeScript
+        );
+        assert_eq!(detect_language(Path::new("src/App.tsx"), ""), Language::Tsx);
         assert_eq!(detect_language(Path::new("src/lib.rs"), ""), Language::Rust);
         assert_eq!(detect_language(Path::new("LICENSE"), ""), Language::Unknown);
     }
@@ -152,5 +162,50 @@ mod tests {
         assert_eq!(tests.name.as_deref(), Some("tests"));
         assert_eq!(tests.children[0].kind, "test");
         assert_eq!(tests.children[0].name.as_deref(), Some("builds_client"));
+    }
+
+    #[test]
+    fn extracts_javascript_items() {
+        let source = "export function loadUser(id) {\n  return id;\n}\n\nexport class Client {\n  fetch() {\n    return loadUser(1);\n  }\n}\n\nconst helper = () => true;\n";
+        let view = analyze_source("src/app.js", Language::JavaScript, source, 80);
+
+        assert_eq!(view.nodes[0].kind, "function");
+        assert_eq!(view.nodes[0].name.as_deref(), Some("loadUser"));
+        assert_eq!(view.nodes[0].start_line, 1);
+        assert_eq!(view.nodes[0].end_line, 3);
+
+        let class = &view.nodes[1];
+        assert_eq!(class.kind, "class");
+        assert_eq!(class.name.as_deref(), Some("Client"));
+        assert_eq!(class.children[0].kind, "method");
+        assert_eq!(class.children[0].name.as_deref(), Some("fetch"));
+
+        assert_eq!(view.nodes[2].kind, "function");
+        assert_eq!(view.nodes[2].name.as_deref(), Some("helper"));
+    }
+
+    #[test]
+    fn extracts_typescript_items() {
+        let source = "export interface User {\n  id: string;\n}\n\ntype UserId = string;\n\nenum Mode { Fast, Slow }\n\nexport class Service {\n  async load(id: UserId): Promise<User> {\n    return { id };\n  }\n}\n";
+        let view = analyze_source("src/app.ts", Language::TypeScript, source, 80);
+
+        assert_eq!(view.nodes[0].kind, "interface");
+        assert_eq!(view.nodes[0].name.as_deref(), Some("User"));
+        assert_eq!(view.nodes[1].kind, "type");
+        assert_eq!(view.nodes[1].name.as_deref(), Some("UserId"));
+        assert_eq!(view.nodes[2].kind, "enum");
+        assert_eq!(view.nodes[2].name.as_deref(), Some("Mode"));
+        assert_eq!(view.nodes[3].kind, "class");
+        assert_eq!(view.nodes[3].children[0].kind, "method");
+        assert_eq!(view.nodes[3].children[0].name.as_deref(), Some("load"));
+    }
+
+    #[test]
+    fn parses_tsx_function_components() {
+        let source = "export function App() {\n  return <main>Hello</main>;\n}\n";
+        let view = analyze_source("src/App.tsx", Language::Tsx, source, 80);
+
+        assert_eq!(view.nodes[0].kind, "function");
+        assert_eq!(view.nodes[0].name.as_deref(), Some("App"));
     }
 }

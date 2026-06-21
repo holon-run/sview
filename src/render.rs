@@ -25,8 +25,10 @@ pub fn render_text(view: &StructureView, options: &RenderOptions) -> String {
 
 fn language_label(language: Language) -> &'static str {
     match language {
+        Language::JavaScript => "javascript",
         Language::Markdown => "markdown",
         Language::Rust => "rust",
+        Language::TypeScript | Language::Tsx => "typescript",
         Language::Unknown => "unknown",
     }
 }

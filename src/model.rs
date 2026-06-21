@@ -10,8 +10,11 @@ pub struct StructureView {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Language {
+    JavaScript,
     Markdown,
     Rust,
+    TypeScript,
+    Tsx,
     Unknown,
 }
 

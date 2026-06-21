@@ -68,3 +68,23 @@ fn emits_json_array_for_multiple_files() {
         .stdout(predicate::str::contains("\"language\": \"markdown\""))
         .stdout(predicate::str::contains("\"language\": \"rust\""));
 }
+
+#[test]
+fn emits_text_for_typescript() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("app.ts");
+    fs::write(
+        &path,
+        "export interface User { id: string }\nexport function loadUser(): User { return { id: '1' }; }\n",
+    )
+    .unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .arg(path.to_str().unwrap())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("app.ts (typescript)"))
+        .stdout(predicate::str::contains("├─ interface User L1-1"))
+        .stdout(predicate::str::contains("└─ function loadUser L2-2"));
+}

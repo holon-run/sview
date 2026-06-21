@@ -1,4 +1,5 @@
 use crate::{
+    javascript::analyze_javascript,
     markdown::analyze_markdown,
     model::{Language, Node, StructureView},
     rust::analyze_rust,
@@ -28,6 +29,11 @@ pub fn analyze_source(
     let line_count = source.lines().count().max(1);
     let nodes = if source.trim().is_empty() {
         Vec::new()
+    } else if matches!(
+        language,
+        Language::JavaScript | Language::TypeScript | Language::Tsx
+    ) {
+        analyze_javascript(language, source, preview_len)
     } else if language == Language::Markdown {
         analyze_markdown(source, preview_len)
     } else if language == Language::Rust {
@@ -53,8 +59,11 @@ pub fn analyze_source(
 
 pub fn detect_language(path: &Path, source: &str) -> Language {
     match path.extension().and_then(|extension| extension.to_str()) {
+        Some("js" | "jsx") => Language::JavaScript,
         Some("md" | "markdown" | "mdown") => Language::Markdown,
         Some("rs") => Language::Rust,
+        Some("ts") => Language::TypeScript,
+        Some("tsx") => Language::Tsx,
         _ if source.trim_start().starts_with("# ") => Language::Markdown,
         _ => Language::Unknown,
     }
