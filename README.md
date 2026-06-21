@@ -23,7 +23,7 @@ agent -> sview -> compact structure view -> targeted reads / patches
 
 Status: **MVP implementation**.
 
-The current crate provides a working Rust CLI with Markdown and Rust structure views. Rust parsing uses `tree-sitter-rust`; Markdown parsing is still a lightweight line-oriented outline.
+The current crate provides a working Rust CLI with Markdown, Rust, JavaScript, and TypeScript structure views. Rust and JS/TS parsing use tree-sitter grammars; Markdown parsing is still a lightweight line-oriented outline.
 
 ## Design goals
 
@@ -165,7 +165,7 @@ Current implementation dependencies:
 
 - `clap` for CLI parsing;
 - `serde` / `serde_json` for output contracts;
-- `tree-sitter` and `tree-sitter-rust` for Rust code outlines.
+- `tree-sitter`, `tree-sitter-rust`, `tree-sitter-javascript`, and `tree-sitter-typescript` for code outlines.
 
 Possible future dependencies include more `tree-sitter` grammars for additional languages and `pulldown-cmark` or another Markdown parser for richer document outlines.
 
@@ -182,10 +182,12 @@ Coverage is tracked with [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llv
 
 ```bash
 cargo install cargo-llvm-cov
-cargo llvm-cov --workspace --all-targets --summary-only
+cargo coverage
 ```
 
-Initial coverage target: keep the core library line coverage at **70% or higher** while the project is small, and raise the bar once more language parsers and fixtures land.
+`cargo coverage` is a Cargo alias for `cargo llvm-cov --workspace --all-targets --summary-only`.
+
+Initial coverage target: keep the core library line coverage at **70% or higher** while the project is small. Parser behavior should be covered with checked-in fixtures under `tests/fixtures/` for every supported language.
 
 ## Relationship to other tools
 
@@ -206,9 +208,17 @@ agent -> sview -> tree-sitter / markdown parser / ast-grep / LSP / compiler
 ├── README.md
 ├── Cargo.toml
 ├── src/
+│   ├── analyzer.rs
+│   ├── javascript.rs
+│   ├── markdown.rs
+│   ├── model.rs
+│   ├── render.rs
+│   ├── rust.rs
+│   ├── util.rs
 │   ├── lib.rs
 │   └── main.rs
 ├── skills/
 │   └── sview-dogfooding/
 └── tests/
+    └── fixtures/
 ```
