@@ -1,4 +1,9 @@
-use crate::{model::Language, model::Node, util::truncate_preview};
+use crate::{
+    model::Language,
+    model::Node,
+    tree::{build_tree, FlatItem},
+    util::truncate_preview,
+};
 use tree_sitter::{Node as AstNode, Parser};
 
 pub(crate) fn analyze_javascript(
@@ -20,28 +25,9 @@ pub(crate) fn analyze_javascript(
         return Vec::new();
     };
 
-    let mut items = Vec::<JavaScriptItem>::new();
+    let mut items = Vec::<FlatItem>::new();
     collect_javascript_items(tree.root_node(), source, preview_len, None, &mut items);
-    build_javascript_tree(&items, None)
-}
-
-#[derive(Debug, Clone)]
-struct JavaScriptItem {
-    parent: Option<usize>,
-    node: Node,
-}
-
-fn build_javascript_tree(items: &[JavaScriptItem], parent: Option<usize>) -> Vec<Node> {
-    items
-        .iter()
-        .enumerate()
-        .filter(|(_, item)| item.parent == parent)
-        .map(|(index, item)| {
-            let mut node = item.node.clone();
-            node.children = build_javascript_tree(items, Some(index));
-            node
-        })
-        .collect()
+    build_tree(&items, None)
 }
 
 fn collect_javascript_items(
@@ -49,12 +35,12 @@ fn collect_javascript_items(
     source: &str,
     preview_len: usize,
     parent: Option<usize>,
-    items: &mut Vec<JavaScriptItem>,
+    items: &mut Vec<FlatItem>,
 ) {
     let current_parent = if let Some(node) = javascript_node_from_ast(ast_node, source, preview_len)
     {
         let index = items.len();
-        items.push(JavaScriptItem { parent, node });
+        items.push(FlatItem { parent, node });
         Some(index)
     } else {
         parent
