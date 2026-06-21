@@ -68,3 +68,30 @@ pub fn detect_language(path: &Path, source: &str) -> Language {
         _ => Language::Unknown,
     }
 }
+
+/// A flattened analyzer item recording a node and its parent index.
+///
+/// All language analyzers collect items into a flat `Vec<AnalyzerItem>` and then
+/// call [`build_tree`] to reconstruct the parent/child hierarchy.
+#[derive(Debug, Clone)]
+pub(crate) struct AnalyzerItem {
+    pub parent: Option<usize>,
+    pub node: Node,
+}
+
+/// Reconstruct a `Vec<Node>` tree from a flat list of [`AnalyzerItem`]s.
+///
+/// Items whose `parent` matches the given `parent` index become direct children.
+/// Each child's own descendants are resolved recursively.
+pub(crate) fn build_tree(items: &[AnalyzerItem], parent: Option<usize>) -> Vec<Node> {
+    items
+        .iter()
+        .enumerate()
+        .filter(|(_, item)| item.parent == parent)
+        .map(|(index, item)| {
+            let mut node = item.node.clone();
+            node.children = build_tree(items, Some(index));
+            node
+        })
+        .collect()
+}

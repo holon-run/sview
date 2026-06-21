@@ -1,4 +1,4 @@
-use crate::{model::Node, util::truncate_preview};
+use crate::{analyzer::build_tree, analyzer::AnalyzerItem, model::Node, util::truncate_preview};
 use tree_sitter::{Node as AstNode, Parser};
 
 pub(crate) fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
@@ -10,7 +10,7 @@ pub(crate) fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
         return Vec::new();
     };
 
-    let mut items = Vec::<RustItem>::new();
+    let mut items = Vec::<AnalyzerItem>::new();
     collect_rust_items(
         tree.root_node(),
         source,
@@ -19,26 +19,7 @@ pub(crate) fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
         false,
         &mut items,
     );
-    build_rust_tree(&items, None)
-}
-
-#[derive(Debug, Clone)]
-struct RustItem {
-    parent: Option<usize>,
-    node: Node,
-}
-
-fn build_rust_tree(items: &[RustItem], parent: Option<usize>) -> Vec<Node> {
-    items
-        .iter()
-        .enumerate()
-        .filter(|(_, item)| item.parent == parent)
-        .map(|(index, item)| {
-            let mut node = item.node.clone();
-            node.children = build_rust_tree(items, Some(index));
-            node
-        })
-        .collect()
+    build_tree(&items, None)
 }
 
 fn collect_rust_items(
@@ -47,12 +28,12 @@ fn collect_rust_items(
     preview_len: usize,
     parent: Option<usize>,
     has_test_attribute: bool,
-    items: &mut Vec<RustItem>,
+    items: &mut Vec<AnalyzerItem>,
 ) {
     let current_parent =
         if let Some(node) = rust_node_from_ast(ast_node, source, preview_len, has_test_attribute) {
             let index = items.len();
-            items.push(RustItem { parent, node });
+            items.push(AnalyzerItem { parent, node });
             Some(index)
         } else {
             parent

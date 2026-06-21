@@ -1,4 +1,8 @@
-use crate::{model::Node, util::truncate_preview};
+use crate::{
+    analyzer::{build_tree, AnalyzerItem},
+    model::Node,
+    util::truncate_preview,
+};
 
 pub(crate) fn analyze_markdown(source: &str, preview_len: usize) -> Vec<Node> {
     let lines = source.lines().collect::<Vec<_>>();
@@ -124,7 +128,14 @@ pub(crate) fn analyze_markdown(source: &str, preview_len: usize) -> Vec<Node> {
         }
     }
 
-    build_markdown_tree(&items, None)
+    let analyzer_items: Vec<AnalyzerItem> = items
+        .into_iter()
+        .map(|item| AnalyzerItem {
+            parent: item.parent,
+            node: item.node,
+        })
+        .collect();
+    build_tree(&analyzer_items, None)
 }
 
 #[derive(Debug, Clone)]
@@ -132,19 +143,6 @@ struct MarkdownItem {
     parent: Option<usize>,
     heading_level: Option<usize>,
     node: Node,
-}
-
-fn build_markdown_tree(items: &[MarkdownItem], parent: Option<usize>) -> Vec<Node> {
-    items
-        .iter()
-        .enumerate()
-        .filter(|(_, item)| item.parent == parent)
-        .map(|(index, item)| {
-            let mut node = item.node.clone();
-            node.children = build_markdown_tree(items, Some(index));
-            node
-        })
-        .collect()
 }
 
 fn parse_heading(line: &str) -> Option<(usize, String)> {
