@@ -156,7 +156,24 @@ A useful MVP can stay very small:
 
 ## Agent navigation
 
-Use `sview` before broad file reads to get a compact outline and choose targeted follow-up ranges:
+Use `sview` as a navigation tool when structure can reduce uncertainty before
+reading or editing. Agents should prefer it before broad file reads, but should
+not force it into tiny or already-known edits.
+
+Good triggers:
+
+- an unfamiliar file may need to be read mostly end-to-end;
+- the target symbol, section, test, or implementation area is only approximate;
+- several candidate Rust, JavaScript, TypeScript, or Markdown files need quick
+  triage before choosing exact ranges;
+- a patch changes parser-visible structure and the resulting outline should be
+  checked.
+
+Skip `sview` when the exact small range is already known, when `rg` directly
+answers the question, or when the file type is unsupported and an outline would
+not guide a better next read.
+
+Typical commands:
 
 ```bash
 sview README.md --depth 2

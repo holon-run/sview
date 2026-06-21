@@ -2,7 +2,7 @@
 
 Use `sview` to generate structured outlines for source code and Markdown files, helping agents quickly navigate projects before reading or editing.
 
-Use `sview` before broad text reads when a Markdown, Rust, JavaScript, or TypeScript file may be large enough that an outline can guide a targeted follow-up range.
+Use `sview` when a compact structure map can reduce uncertainty before reading or editing. Prefer it before broad text reads of Markdown, Rust, JavaScript, or TypeScript files; skip it for tiny edits where the exact range is already known.
 
 ## Install
 
@@ -34,7 +34,14 @@ cargo install --path .
 
 - Before reading an unfamiliar Markdown, Rust, JavaScript, or TypeScript file end-to-end.
 - Before editing a symbol, section, or test when only its approximate location is known.
+- When several candidate files need quick triage before choosing exact ranges.
 - After parser changes, to inspect representative project files and confirm the outline remains useful.
+
+## When not to use
+
+- When `rg` directly answers the question and no structural map is needed.
+- When the exact small range to read or patch is already known.
+- When the file type is unsupported and the outline would not guide a better next read.
 
 ## Commands
 
