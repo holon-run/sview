@@ -4,6 +4,7 @@ mod markdown;
 mod model;
 mod render;
 mod rust;
+mod traverse;
 mod tree;
 mod util;
 

@@ -1,65 +1,42 @@
 use crate::{
     model::Node,
-    tree::{build_tree, FlatItem},
+    traverse::{analyze_tree_sitter, ast_preview, NodeClassifier},
     util::truncate_preview,
 };
-use tree_sitter::{Node as AstNode, Parser};
+use tree_sitter::Node as AstNode;
 
 pub(crate) fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
-    let mut parser = Parser::new();
-    parser
-        .set_language(&tree_sitter_rust::LANGUAGE.into())
-        .expect("tree-sitter Rust grammar is valid");
-    let Some(tree) = parser.parse(source, None) else {
-        return Vec::new();
-    };
-
-    let mut items = Vec::<FlatItem>::new();
-    collect_rust_items(
-        tree.root_node(),
+    analyze_tree_sitter(
+        tree_sitter_rust::LANGUAGE.into(),
         source,
         preview_len,
-        None,
-        false,
-        &mut items,
-    );
-    build_tree(&items, None)
+        RustClassifier::default(),
+    )
 }
 
-fn collect_rust_items(
-    ast_node: AstNode,
-    source: &str,
-    preview_len: usize,
-    parent: Option<usize>,
-    has_test_attribute: bool,
-    items: &mut Vec<FlatItem>,
-) {
-    let current_parent =
-        if let Some(node) = rust_node_from_ast(ast_node, source, preview_len, has_test_attribute) {
-            let index = items.len();
-            items.push(FlatItem { parent, node });
-            Some(index)
+#[derive(Default)]
+struct RustClassifier {
+    /// Set when the preceding sibling was a `#[test]` attribute.
+    /// Consumed by the next `classify` call.
+    pending_test_attribute: bool,
+}
+
+impl NodeClassifier for RustClassifier {
+    fn classify(&mut self, ast_node: AstNode, source: &str, preview_len: usize) -> Option<Node> {
+        let has_test_attribute = self.pending_test_attribute;
+        self.pending_test_attribute = false;
+        rust_node_from_ast(ast_node, source, preview_len, has_test_attribute)
+    }
+
+    fn observe_sibling(&mut self, ast_node: AstNode, source: &str) -> bool {
+        if ast_node.kind() == "attribute_item" {
+            // Attribute nodes are not structural items; skip them but
+            // record test-attribute status for the next sibling.
+            self.pending_test_attribute = rust_is_test_attribute(ast_node, source);
+            true
         } else {
-            parent
-        };
-
-    let mut cursor = ast_node.walk();
-    let mut pending_test_attribute = false;
-    for child in ast_node.named_children(&mut cursor) {
-        if child.kind() == "attribute_item" {
-            pending_test_attribute = rust_is_test_attribute(child, source);
-            continue;
+            false
         }
-
-        collect_rust_items(
-            child,
-            source,
-            preview_len,
-            current_parent,
-            pending_test_attribute,
-            items,
-        );
-        pending_test_attribute = false;
     }
 }
 
@@ -92,7 +69,7 @@ fn rust_node_from_ast(
         name: Some(name),
         start_line: ast_node.start_position().row + 1,
         end_line: ast_node.end_position().row + 1,
-        preview: rust_ast_preview(ast_node, source, preview_len),
+        preview: ast_preview(ast_node, source, preview_len),
         children: Vec::new(),
     })
 }
@@ -120,13 +97,4 @@ fn rust_is_test_attribute(ast_node: AstNode, source: &str) -> bool {
     ast_node
         .utf8_text(source.as_bytes())
         .is_ok_and(|text| text.starts_with("#[test") || text.starts_with("#[tokio::test"))
-}
-
-fn rust_ast_preview(ast_node: AstNode, source: &str, preview_len: usize) -> Option<String> {
-    source
-        .lines()
-        .nth(ast_node.start_position().row)
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(|line| truncate_preview(line, preview_len))
 }

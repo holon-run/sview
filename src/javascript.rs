@@ -1,54 +1,28 @@
 use crate::{
-    model::Language,
-    model::Node,
-    tree::{build_tree, FlatItem},
-    util::truncate_preview,
+    model::{Language, Node},
+    traverse::{analyze_tree_sitter, ast_preview, NodeClassifier},
 };
-use tree_sitter::{Node as AstNode, Parser};
+use tree_sitter::Node as AstNode;
 
 pub(crate) fn analyze_javascript(
     language: Language,
     source: &str,
     preview_len: usize,
 ) -> Vec<Node> {
-    let mut parser = Parser::new();
     let grammar = match language {
         Language::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
         Language::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
         Language::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
         _ => unreachable!("analyze_javascript only accepts JS/TS languages"),
     };
-    parser
-        .set_language(&grammar)
-        .expect("tree-sitter JavaScript/TypeScript grammar is valid");
-    let Some(tree) = parser.parse(source, None) else {
-        return Vec::new();
-    };
-
-    let mut items = Vec::<FlatItem>::new();
-    collect_javascript_items(tree.root_node(), source, preview_len, None, &mut items);
-    build_tree(&items, None)
+    analyze_tree_sitter(grammar, source, preview_len, JsClassifier)
 }
 
-fn collect_javascript_items(
-    ast_node: AstNode,
-    source: &str,
-    preview_len: usize,
-    parent: Option<usize>,
-    items: &mut Vec<FlatItem>,
-) {
-    let current_parent = if let Some(node) = javascript_node_from_ast(ast_node, source, preview_len)
-    {
-        let index = items.len();
-        items.push(FlatItem { parent, node });
-        Some(index)
-    } else {
-        parent
-    };
+struct JsClassifier;
 
-    let mut cursor = ast_node.walk();
-    for child in ast_node.named_children(&mut cursor) {
-        collect_javascript_items(child, source, preview_len, current_parent, items);
+impl NodeClassifier for JsClassifier {
+    fn classify(&mut self, ast_node: AstNode, source: &str, preview_len: usize) -> Option<Node> {
+        javascript_node_from_ast(ast_node, source, preview_len)
     }
 }
 
@@ -71,7 +45,7 @@ fn javascript_node_from_ast(ast_node: AstNode, source: &str, preview_len: usize)
         name: Some(name),
         start_line: ast_node.start_position().row + 1,
         end_line: ast_node.end_position().row + 1,
-        preview: javascript_ast_preview(ast_node, source, preview_len),
+        preview: ast_preview(ast_node, source, preview_len),
         children: Vec::new(),
     })
 }
@@ -88,13 +62,4 @@ fn javascript_ast_name(ast_node: AstNode, source: &str) -> Option<String> {
         .or_else(|| ast_node.child_by_field_name("property"))
         .and_then(|node| node.utf8_text(source.as_bytes()).ok())
         .map(ToString::to_string)
-}
-
-fn javascript_ast_preview(ast_node: AstNode, source: &str, preview_len: usize) -> Option<String> {
-    source
-        .lines()
-        .nth(ast_node.start_position().row)
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(|line| truncate_preview(line, preview_len))
 }
