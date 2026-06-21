@@ -135,11 +135,11 @@ A useful MVP can stay very small:
 2. Rust outline for modules, structs, enums, traits, impl blocks, functions, and tests.
 3. JSON output with line ranges and short previews.
 4. Compact text output for quick terminal use.
-5. Real dogfooding inside agent tasks that currently require large-file inspection.
+5. Real agent-assisted navigation inside tasks that currently require large-file inspection.
 
-## Dogfooding
+## Agent navigation
 
-During development, use the local binary before broad file reads:
+Use `sview` before broad file reads to get a compact outline and choose targeted follow-up ranges:
 
 ```bash
 cargo run --quiet -- README.md --depth 2
@@ -261,7 +261,7 @@ agent -> sview -> tree-sitter / markdown parser / ast-grep / LSP / compiler
 │   ├── lib.rs
 │   └── main.rs
 ├── skills/
-│   └── sview-dogfooding/
+│   └── sview/
 └── tests/
     └── fixtures/
 ```
