@@ -1,74 +1,27 @@
 use crate::{
     model::Node,
-    tree::{build_tree, FlatItem},
+    tree::{ast_preview, build_tree, collect_items, parse, FlatItem},
     util::truncate_preview,
 };
-use tree_sitter::{Node as AstNode, Parser};
+use tree_sitter::Node as AstNode;
 
 pub(crate) fn analyze_rust(source: &str, preview_len: usize) -> Vec<Node> {
-    let mut parser = Parser::new();
-    parser
-        .set_language(&tree_sitter_rust::LANGUAGE.into())
-        .expect("tree-sitter Rust grammar is valid");
-    let Some(tree) = parser.parse(source, None) else {
+    let Some(tree) = parse(tree_sitter_rust::LANGUAGE.into(), source) else {
         return Vec::new();
     };
 
     let mut items = Vec::<FlatItem>::new();
-    collect_rust_items(
-        tree.root_node(),
-        source,
-        preview_len,
-        None,
-        false,
-        &mut items,
-    );
+    collect_items(tree.root_node(), None, &mut items, &|ast_node| {
+        rust_node_from_ast(ast_node, source, preview_len)
+    });
     build_tree(&items, None)
 }
 
-fn collect_rust_items(
-    ast_node: AstNode,
-    source: &str,
-    preview_len: usize,
-    parent: Option<usize>,
-    has_test_attribute: bool,
-    items: &mut Vec<FlatItem>,
-) {
-    let current_parent =
-        if let Some(node) = rust_node_from_ast(ast_node, source, preview_len, has_test_attribute) {
-            let index = items.len();
-            items.push(FlatItem { parent, node });
-            Some(index)
-        } else {
-            parent
-        };
+fn rust_node_from_ast(ast_node: AstNode, source: &str, preview_len: usize) -> Option<Node> {
+    let has_test_attribute = ast_node.prev_named_sibling().is_some_and(|sibling| {
+        sibling.kind() == "attribute_item" && rust_is_test_attribute(sibling, source)
+    });
 
-    let mut cursor = ast_node.walk();
-    let mut pending_test_attribute = false;
-    for child in ast_node.named_children(&mut cursor) {
-        if child.kind() == "attribute_item" {
-            pending_test_attribute = rust_is_test_attribute(child, source);
-            continue;
-        }
-
-        collect_rust_items(
-            child,
-            source,
-            preview_len,
-            current_parent,
-            pending_test_attribute,
-            items,
-        );
-        pending_test_attribute = false;
-    }
-}
-
-fn rust_node_from_ast(
-    ast_node: AstNode,
-    source: &str,
-    preview_len: usize,
-    has_test_attribute: bool,
-) -> Option<Node> {
     let (kind, name) = match ast_node.kind() {
         "mod_item" => ("module", rust_ast_name(ast_node, source)?),
         "struct_item" => ("struct", rust_ast_name(ast_node, source)?),
@@ -92,7 +45,7 @@ fn rust_node_from_ast(
         name: Some(name),
         start_line: ast_node.start_position().row + 1,
         end_line: ast_node.end_position().row + 1,
-        preview: rust_ast_preview(ast_node, source, preview_len),
+        preview: ast_preview(ast_node, source, preview_len),
         children: Vec::new(),
     })
 }
@@ -120,13 +73,4 @@ fn rust_is_test_attribute(ast_node: AstNode, source: &str) -> bool {
     ast_node
         .utf8_text(source.as_bytes())
         .is_ok_and(|text| text.starts_with("#[test") || text.starts_with("#[tokio::test"))
-}
-
-fn rust_ast_preview(ast_node: AstNode, source: &str, preview_len: usize) -> Option<String> {
-    source
-        .lines()
-        .nth(ast_node.start_position().row)
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(|line| truncate_preview(line, preview_len))
 }
