@@ -21,9 +21,23 @@ agent -> sview -> compact structure view -> targeted reads / patches
 
 ## Project status
 
-Status: **MVP implementation**.
+Status: **0.1.0 release candidate**.
 
 The current crate provides a working Rust CLI with Markdown, Rust, JavaScript, and TypeScript structure views. Rust and JS/TS parsing use tree-sitter grammars; Markdown parsing is still a lightweight line-oriented outline.
+
+## Installation
+
+Install the released CLI from crates.io:
+
+```bash
+cargo install sview
+```
+
+Or install from the repository checkout:
+
+```bash
+cargo install --path .
+```
 
 ## Design goals
 
@@ -49,9 +63,9 @@ First versions should not implement:
 
 Those capabilities may later belong in a sibling tool such as `sedit`, or in a higher-level agent harness that combines `sview` with parser, LSP, compiler, or codemod backends.
 
-## Initial CLI sketch
+## CLI
 
-The exact interface is still provisional, but the tool should be shaped around simple file-oriented calls:
+The CLI is shaped around simple file-oriented calls:
 
 ```bash
 sview README.md
@@ -60,11 +74,10 @@ sview README.md --json
 sview README.md src/lib.rs --json
 sview src/lib.rs --json
 sview src/lib.rs --depth 2
-sview src/lib.rs --ranges
-sview src/lib.rs --format agent
+sview src/lib.rs --format text
 ```
 
-The first stable version should probably support:
+The 0.1.x CLI supports:
 
 - one or more input files per invocation;
 - automatic language detection from path and content;
@@ -202,6 +215,19 @@ cargo coverage
 
 Initial coverage target: keep the core library line coverage at **70% or higher** while the project is small. Parser behavior should be covered with checked-in fixtures under `tests/fixtures/` for every supported language.
 
+## Release
+
+Release readiness checks:
+
+```bash
+cargo fmt -- --check
+cargo test
+cargo coverage
+cargo publish --dry-run
+```
+
+The crate is licensed under Apache-2.0. Release tags use the `vMAJOR.MINOR.PATCH` form, for example `v0.1.0`.
+
 ## Relationship to other tools
 
 `sview` is narrower than an IDE and higher-level than raw parser output:
@@ -220,6 +246,10 @@ agent -> sview -> tree-sitter / markdown parser / ast-grep / LSP / compiler
 .
 ├── README.md
 ├── Cargo.toml
+├── LICENSE
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 ├── src/
 │   ├── analyzer.rs
 │   ├── javascript.rs

@@ -2,8 +2,15 @@
 name = "sview"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.85"
 description = "Agent-friendly structure views of source and document files"
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
+repository = "https://github.com/holon-run/sview"
+homepage = "https://github.com/holon-run/sview"
+documentation = "https://docs.rs/sview"
+readme = "README.md"
+keywords = ["agent", "cli", "outline", "tree-sitter", "structure"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 anyhow = "1.0.95"
