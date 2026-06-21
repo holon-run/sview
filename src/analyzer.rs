@@ -1,0 +1,61 @@
+use crate::{
+    markdown::analyze_markdown,
+    model::{Language, Node, StructureView},
+    rust::analyze_rust,
+    util::{file_name, first_non_empty_preview},
+};
+use anyhow::{Context, Result};
+use std::{fs, path::Path};
+
+pub fn analyze_file(path: &Path, preview_len: usize) -> Result<StructureView> {
+    let source =
+        fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let language = detect_language(path, &source);
+    Ok(analyze_source(
+        path.to_string_lossy().as_ref(),
+        language,
+        &source,
+        preview_len,
+    ))
+}
+
+pub fn analyze_source(
+    path: &str,
+    language: Language,
+    source: &str,
+    preview_len: usize,
+) -> StructureView {
+    let line_count = source.lines().count().max(1);
+    let nodes = if source.trim().is_empty() {
+        Vec::new()
+    } else if language == Language::Markdown {
+        analyze_markdown(source, preview_len)
+    } else if language == Language::Rust {
+        analyze_rust(source, preview_len)
+    } else {
+        vec![Node {
+            kind: "file".to_string(),
+            level: None,
+            name: Some(file_name(path)),
+            start_line: 1,
+            end_line: line_count,
+            preview: first_non_empty_preview(source, preview_len),
+            children: Vec::new(),
+        }]
+    };
+
+    StructureView {
+        path: path.to_string(),
+        language,
+        nodes,
+    }
+}
+
+pub fn detect_language(path: &Path, source: &str) -> Language {
+    match path.extension().and_then(|extension| extension.to_str()) {
+        Some("md" | "markdown" | "mdown") => Language::Markdown,
+        Some("rs") => Language::Rust,
+        _ if source.trim_start().starts_with("# ") => Language::Markdown,
+        _ => Language::Unknown,
+    }
+}
