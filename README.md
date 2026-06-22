@@ -157,21 +157,25 @@ A useful MVP can stay very small:
 ## Agent navigation
 
 Use `sview` as a navigation tool when structure can reduce uncertainty before
-reading or editing. Agents should prefer it before broad file reads, but should
-not force it into tiny or already-known edits.
+reading or editing. Agents should use it when a compact structure map is likely
+to save broad reads, but should not force it into small files, direct text
+lookups, or already-known edits.
 
 Good triggers:
 
-- an unfamiliar file may need to be read mostly end-to-end;
-- the target symbol, section, test, or implementation area is only approximate;
-- several candidate Rust, JavaScript, TypeScript, or Markdown files need quick
-  triage before choosing exact ranges;
+- an unfamiliar file may need to be read mostly end-to-end, especially if it is
+  large enough that a structural map can avoid broad reads;
+- the target symbol, section, test, or implementation area is only approximate
+  and text search does not identify a tight range;
+- several candidate Rust, JavaScript, TypeScript, or Markdown files or symbols
+  need quick triage before choosing exact ranges;
 - a patch changes parser-visible structure and the resulting outline should be
   checked.
 
 Skip `sview` when the exact small range is already known, when `rg` directly
-answers the question, or when the file type is unsupported and an outline would
-not guide a better next read.
+answers the question, when the file is small enough for one focused read, when
+only one or two obvious candidate files are involved, or when the file type is
+unsupported and an outline would not guide a better next read.
 
 Typical commands:
 
@@ -206,9 +210,13 @@ tests/fixtures/typescript_sample.ts (typescript)
 
 The intended workflow is:
 
-1. run `sview` on one or more candidate files to get stable line ranges;
-2. read only the relevant range with a focused command such as `sed -n '120,180p'`;
-3. patch or inspect the exact range, then rerun `sview` or tests if structure changed.
+1. try the cheapest locator first: file names, `rg`, or existing compiler/test output;
+2. if that gives a precise file and line range, read that range directly and skip
+   `sview`;
+3. if the target is still approximate, spans multiple candidates, or would require
+   broad reads, run `sview` with a shallow `--depth` / `--max-nodes` limit;
+4. read only the relevant range with a focused command such as `sed -n '120,180p'`;
+5. patch or inspect the exact range, then rerun `sview` or tests if structure changed.
 
 ## Possible implementation approach
 
