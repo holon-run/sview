@@ -33,8 +33,8 @@ tests/fixtures/swift_sample.swift (swift)
 └─ enum Mode L24-27 — enum Mode {
 ```
 
-C/C++, Java, Swift, and Objective-C source output use the same contract for
-imports/includes/packages, namespaces/classes/types, fields/properties,
+C/C++, Java/Kotlin, Swift, and Objective-C source output use the same contract
+for imports/includes/packages, namespaces/classes/types, fields/properties,
 constructors/initializers, functions, and methods:
 
 ```text
@@ -48,11 +48,28 @@ src/client.cpp (cpp)
    └─ function add L17-17 — int add(int a, int b) { return a + b; }
 ```
 
+Kotlin/Android source views include packages, imports, classes, interfaces,
+objects, constructors, properties, and functions:
+
+```text
+app/src/main/java/com/example/MainActivity.kt (kotlin)
+├─ package com.example.app L1-1 — package com.example.app
+├─ import android.app.Activity L3-3 — import android.app.Activity
+└─ class MainActivity L18-28 — class MainActivity private constructor(
+   ├─ constructor MainActivity L18-20 — class MainActivity private constructor(
+   ├─ property title L21-21 — var title: String = "Home"
+   └─ function onCreate L25-27 — override fun onCreate() {
+```
+
 ## Project status
 
 Status: **0.1.x released CLI**.
 
-The current crate provides a working Rust CLI with Markdown, Rust, C, C++, Java, Swift, Objective-C, JavaScript, and TypeScript structure views. Rust, C/C++, Java, Swift, Objective-C, and JS/TS parsing use tree-sitter grammars; Markdown parsing is still a lightweight line-oriented outline.
+The current crate provides a working Rust CLI with Markdown, Rust, C, C++,
+Java, Kotlin, Swift, Objective-C, JavaScript, and TypeScript structure views.
+Rust, C/C++, Java, Kotlin, Swift, Objective-C, and JS/TS parsing use
+tree-sitter grammars; Markdown parsing is still a lightweight line-oriented
+outline.
 
 ## Installation
 

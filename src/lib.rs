@@ -2,6 +2,7 @@ mod analyzer;
 mod cpp;
 mod java;
 mod javascript;
+mod kotlin;
 mod markdown;
 mod model;
 mod objc;
@@ -34,6 +35,14 @@ mod tests {
         assert_eq!(
             detect_language(Path::new("src/MainActivity.java"), ""),
             Language::Java
+        );
+        assert_eq!(
+            detect_language(Path::new("src/MainActivity.kt"), ""),
+            Language::Kotlin
+        );
+        assert_eq!(
+            detect_language(Path::new("build.gradle.kts"), ""),
+            Language::Kotlin
         );
         assert_eq!(detect_language(Path::new("src/client.c"), ""), Language::C);
         assert_eq!(
@@ -94,6 +103,10 @@ mod tests {
             "\"javascript\""
         );
         assert_eq!(serde_json::to_string(&Language::Java).unwrap(), "\"java\"");
+        assert_eq!(
+            serde_json::to_string(&Language::Kotlin).unwrap(),
+            "\"kotlin\""
+        );
         assert_eq!(serde_json::to_string(&Language::C).unwrap(), "\"c\"");
         assert_eq!(serde_json::to_string(&Language::Cpp).unwrap(), "\"cpp\"");
         assert_eq!(

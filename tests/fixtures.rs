@@ -177,6 +177,43 @@ fn java_fixture_covers_android_class_shapes() {
 }
 
 #[test]
+fn kotlin_fixture_covers_android_source_shapes() {
+    let view = analyze_source(
+        "tests/fixtures/kotlin_sample.kt",
+        Language::Kotlin,
+        include_str!("fixtures/kotlin_sample.kt"),
+        80,
+    );
+
+    assert_node(&view.nodes[0], "package", "com.example.app", 1, 1);
+    assert_node(&view.nodes[1], "import", "android.app.Activity", 3, 3);
+    assert_node(&view.nodes[2], "import", "kotlinx.coroutines.*", 4, 4);
+    assert_node(&view.nodes[3], "annotation", "Screen", 6, 6);
+    assert_node(&view.nodes[4], "interface", "Presenter", 8, 10);
+    assert_node(&view.nodes[4].children[0], "function", "start", 9, 9);
+    assert_node(&view.nodes[5], "class", "UiState", 12, 12);
+    assert_node(&view.nodes[6], "object", "AppConfig", 14, 16);
+    assert_node(&view.nodes[6].children[0], "property", "name", 15, 15);
+    assert_node(&view.nodes[7], "class", "MainActivity", 18, 28);
+    assert_node(
+        &view.nodes[7].children[0],
+        "constructor",
+        "MainActivity",
+        18,
+        20,
+    );
+    assert_node(&view.nodes[7].children[1], "property", "title", 21, 21);
+    assert_node(
+        &view.nodes[7].children[2],
+        "constructor",
+        "MainActivity",
+        23,
+        23,
+    );
+    assert_node(&view.nodes[7].children[3], "function", "onCreate", 25, 27);
+}
+
+#[test]
 fn typescript_fixture_covers_types_and_classes() {
     let view = analyze_source(
         "tests/fixtures/typescript_sample.ts",

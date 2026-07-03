@@ -2,6 +2,7 @@ use crate::{
     cpp::analyze_cpp_like,
     java::analyze_java,
     javascript::analyze_javascript,
+    kotlin::analyze_kotlin,
     markdown::analyze_markdown,
     model::{Language, Node, StructureView},
     objc::analyze_objc,
@@ -42,6 +43,8 @@ pub fn analyze_source(
         analyze_javascript(language, source, preview_len)
     } else if language == Language::Java {
         analyze_java(source, preview_len)
+    } else if language == Language::Kotlin {
+        analyze_kotlin(source, preview_len)
     } else if language == Language::ObjectiveC {
         analyze_objc(source, preview_len)
     } else if language == Language::Swift {
@@ -76,6 +79,7 @@ pub fn detect_language(path: &Path, source: &str) -> Language {
         Some("cc" | "cpp" | "cxx" | "hh" | "hpp" | "hxx") => Language::Cpp,
         Some("java") => Language::Java,
         Some("js" | "jsx") => Language::JavaScript,
+        Some("kt" | "kts") => Language::Kotlin,
         Some("md" | "markdown" | "mdown") => Language::Markdown,
         Some("m" | "mm") => Language::ObjectiveC,
         Some("rs") => Language::Rust,

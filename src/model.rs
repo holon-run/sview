@@ -16,6 +16,7 @@ pub enum Language {
     Java,
     #[serde(rename = "javascript")]
     JavaScript,
+    Kotlin,
     Markdown,
     ObjectiveC,
     Rust,

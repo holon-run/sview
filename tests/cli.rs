@@ -111,6 +111,27 @@ fn emits_text_for_java() {
 }
 
 #[test]
+fn emits_text_for_kotlin() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("MainActivity.kt");
+    fs::write(
+        &path,
+        "package com.example\n\nclass MainActivity {\n  fun onCreate() {}\n}\n",
+    )
+    .unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .arg(path.to_str().unwrap())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("MainActivity.kt (kotlin)"))
+        .stdout(predicate::str::contains("├─ package com.example L1-1"))
+        .stdout(predicate::str::contains("└─ class MainActivity L3-5"))
+        .stdout(predicate::str::contains("function onCreate L4-4"));
+}
+
+#[test]
 fn emits_text_for_cpp() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("client.cpp");
