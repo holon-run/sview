@@ -34,6 +34,39 @@ fn javascript_fixture_covers_functions_classes_and_methods() {
 }
 
 #[test]
+fn java_fixture_covers_android_class_shapes() {
+    let view = analyze_source(
+        "tests/fixtures/java_sample.java",
+        Language::Java,
+        include_str!("fixtures/java_sample.java"),
+        80,
+    );
+
+    assert_node(&view.nodes[0], "package", "com.example.app", 1, 1);
+    assert_node(&view.nodes[1], "import", "android.app.Activity", 3, 3);
+    assert_node(&view.nodes[2], "import", "android.os.Bundle", 4, 4);
+    assert_node(&view.nodes[3], "class", "MainActivity", 6, 26);
+    assert_node(&view.nodes[3].children[0], "field", "title", 7, 7);
+    assert_node(
+        &view.nodes[3].children[1],
+        "constructor",
+        "MainActivity",
+        9,
+        11,
+    );
+    assert_node(&view.nodes[3].children[2], "method", "onCreate", 13, 16);
+    assert_node(&view.nodes[3].children[3], "interface", "Screen", 18, 20);
+    assert_node(
+        &view.nodes[3].children[3].children[0],
+        "method",
+        "render",
+        19,
+        19,
+    );
+    assert_node(&view.nodes[3].children[4], "enum", "Mode", 22, 25);
+}
+
+#[test]
 fn typescript_fixture_covers_types_and_classes() {
     let view = analyze_source(
         "tests/fixtures/typescript_sample.ts",

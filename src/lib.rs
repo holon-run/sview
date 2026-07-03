@@ -1,4 +1,5 @@
 mod analyzer;
+mod java;
 mod javascript;
 mod markdown;
 mod model;
@@ -28,6 +29,10 @@ mod tests {
             Language::JavaScript
         );
         assert_eq!(
+            detect_language(Path::new("src/MainActivity.java"), ""),
+            Language::Java
+        );
+        assert_eq!(
             detect_language(Path::new("src/app.ts"), ""),
             Language::TypeScript
         );
@@ -53,6 +58,7 @@ mod tests {
             serde_json::to_string(&Language::JavaScript).unwrap(),
             "\"javascript\""
         );
+        assert_eq!(serde_json::to_string(&Language::Java).unwrap(), "\"java\"");
         assert_eq!(
             serde_json::to_string(&Language::TypeScript).unwrap(),
             "\"typescript\""
@@ -199,6 +205,36 @@ mod tests {
 
         assert_eq!(view.nodes[2].kind, "function");
         assert_eq!(view.nodes[2].name.as_deref(), Some("helper"));
+    }
+
+    #[test]
+    fn extracts_java_items() {
+        let source = "package com.example.app;\n\nimport android.app.Activity;\n\npublic class MainActivity extends Activity {\n    private String title;\n\n    public MainActivity() {}\n\n    @Override\n    protected void onCreate(Bundle state) {}\n\n    static class Helper {\n        void bind() {}\n    }\n}\n";
+        let view = analyze_source(
+            "app/src/main/java/MainActivity.java",
+            Language::Java,
+            source,
+            80,
+        );
+
+        assert_eq!(view.nodes[0].kind, "package");
+        assert_eq!(view.nodes[0].name.as_deref(), Some("com.example.app"));
+        assert_eq!(view.nodes[1].kind, "import");
+        assert_eq!(view.nodes[1].name.as_deref(), Some("android.app.Activity"));
+
+        let class = &view.nodes[2];
+        assert_eq!(class.kind, "class");
+        assert_eq!(class.name.as_deref(), Some("MainActivity"));
+        assert_eq!(class.children[0].kind, "field");
+        assert_eq!(class.children[0].name.as_deref(), Some("title"));
+        assert_eq!(class.children[1].kind, "constructor");
+        assert_eq!(class.children[1].name.as_deref(), Some("MainActivity"));
+        assert_eq!(class.children[2].kind, "method");
+        assert_eq!(class.children[2].name.as_deref(), Some("onCreate"));
+        assert_eq!(class.children[3].kind, "class");
+        assert_eq!(class.children[3].name.as_deref(), Some("Helper"));
+        assert_eq!(class.children[3].children[0].kind, "method");
+        assert_eq!(class.children[3].children[0].name.as_deref(), Some("bind"));
     }
 
     #[test]

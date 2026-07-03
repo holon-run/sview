@@ -1,4 +1,5 @@
 use crate::{
+    java::analyze_java,
     javascript::analyze_javascript,
     markdown::analyze_markdown,
     model::{Language, Node, StructureView},
@@ -34,6 +35,8 @@ pub fn analyze_source(
         Language::JavaScript | Language::TypeScript | Language::Tsx
     ) {
         analyze_javascript(language, source, preview_len)
+    } else if language == Language::Java {
+        analyze_java(source, preview_len)
     } else if language == Language::Markdown {
         analyze_markdown(source, preview_len)
     } else if language == Language::Rust {
@@ -59,6 +62,7 @@ pub fn analyze_source(
 
 pub fn detect_language(path: &Path, source: &str) -> Language {
     match path.extension().and_then(|extension| extension.to_str()) {
+        Some("java") => Language::Java,
         Some("js" | "jsx") => Language::JavaScript,
         Some("md" | "markdown" | "mdown") => Language::Markdown,
         Some("rs") => Language::Rust,

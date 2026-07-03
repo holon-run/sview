@@ -88,3 +88,24 @@ fn emits_text_for_typescript() {
         .stdout(predicate::str::contains("├─ interface User L1-1"))
         .stdout(predicate::str::contains("└─ function loadUser L2-2"));
 }
+
+#[test]
+fn emits_text_for_java() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("MainActivity.java");
+    fs::write(
+        &path,
+        "package com.example;\n\npublic class MainActivity {\n  void onCreate() {}\n}\n",
+    )
+    .unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .arg(path.to_str().unwrap())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("MainActivity.java (java)"))
+        .stdout(predicate::str::contains("├─ package com.example L1-1"))
+        .stdout(predicate::str::contains("└─ class MainActivity L3-5"))
+        .stdout(predicate::str::contains("method onCreate L4-4"));
+}
