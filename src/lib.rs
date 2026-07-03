@@ -4,8 +4,10 @@ mod java;
 mod javascript;
 mod markdown;
 mod model;
+mod objc;
 mod render;
 mod rust;
+mod swift;
 mod tree;
 mod util;
 
@@ -47,6 +49,25 @@ mod tests {
             Language::Cpp
         );
         assert_eq!(
+            detect_language(Path::new("Sources/App/Client.swift"), ""),
+            Language::Swift
+        );
+        assert_eq!(
+            detect_language(Path::new("Sources/Client.m"), ""),
+            Language::ObjectiveC
+        );
+        assert_eq!(
+            detect_language(Path::new("Sources/Client.mm"), ""),
+            Language::ObjectiveC
+        );
+        assert_eq!(
+            detect_language(
+                Path::new("Sources/Client.h"),
+                "#import <Foundation/Foundation.h>"
+            ),
+            Language::ObjectiveC
+        );
+        assert_eq!(
             detect_language(Path::new("src/app.ts"), ""),
             Language::TypeScript
         );
@@ -75,6 +96,14 @@ mod tests {
         assert_eq!(serde_json::to_string(&Language::Java).unwrap(), "\"java\"");
         assert_eq!(serde_json::to_string(&Language::C).unwrap(), "\"c\"");
         assert_eq!(serde_json::to_string(&Language::Cpp).unwrap(), "\"cpp\"");
+        assert_eq!(
+            serde_json::to_string(&Language::Swift).unwrap(),
+            "\"swift\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Language::ObjectiveC).unwrap(),
+            "\"objective_c\""
+        );
         assert_eq!(
             serde_json::to_string(&Language::TypeScript).unwrap(),
             "\"typescript\""

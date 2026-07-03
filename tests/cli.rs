@@ -131,3 +131,49 @@ fn emits_text_for_cpp() {
         .stdout(predicate::str::contains("class Client L4-7"))
         .stdout(predicate::str::contains("method fetch L6-6"));
 }
+
+#[test]
+fn emits_text_for_swift() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("Client.swift");
+    fs::write(
+        &path,
+        "import Foundation\n\nstruct Client {\n  let title: String\n  func fetch() {}\n}\n",
+    )
+    .unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .arg(path.to_str().unwrap())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Client.swift (swift)"))
+        .stdout(predicate::str::contains("├─ import Foundation L1-1"))
+        .stdout(predicate::str::contains("└─ struct Client L3-6"))
+        .stdout(predicate::str::contains("property title L4-4"))
+        .stdout(predicate::str::contains("function fetch L5-5"));
+}
+
+#[test]
+fn emits_text_for_objective_c() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("Client.m");
+    fs::write(
+        &path,
+        "#import <Foundation/Foundation.h>\n\n@interface Client : NSObject\n@property NSString *title;\n- (void)render;\n@end\n",
+    )
+    .unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .arg(path.to_str().unwrap())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Client.m (objective_c)"))
+        .stdout(predicate::str::contains(
+            "├─ import <Foundation/Foundation.h> L1-1",
+        ))
+        .stdout(predicate::str::contains("└─ interface Client L3-6"))
+        .stdout(predicate::str::contains("property title L4-4"))
+        .stdout(predicate::str::contains("method render L5-5"));
+}

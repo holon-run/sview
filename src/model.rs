@@ -17,7 +17,9 @@ pub enum Language {
     #[serde(rename = "javascript")]
     JavaScript,
     Markdown,
+    ObjectiveC,
     Rust,
+    Swift,
     #[serde(rename = "typescript")]
     TypeScript,
     #[serde(rename = "typescript")]

@@ -19,8 +19,23 @@ That is enough for small files, but it becomes expensive and fragile for large s
 agent -> sview -> compact structure view -> targeted reads / patches
 ```
 
-C/C++ and Java source output use the same contract for includes/packages,
-namespaces/classes, fields, constructors, functions, and methods:
+Swift and Objective-C output follows the same range-oriented outline:
+
+```text
+tests/fixtures/swift_sample.swift (swift)
+├─ import Foundation L1-1 — import Foundation
+├─ struct Client L3-13 — struct Client {
+│  ├─ property title L4-4 — let title: String
+│  ├─ initializer init L6-8 — init(title: String) {
+│  └─ function fetch L10-12 — func fetch(id: String) -> String {
+├─ protocol Screen L15-18 — protocol Screen {
+├─ extension Client L20-22 — extension Client {
+└─ enum Mode L24-27 — enum Mode {
+```
+
+C/C++, Java, Swift, and Objective-C source output use the same contract for
+imports/includes/packages, namespaces/classes/types, fields/properties,
+constructors/initializers, functions, and methods:
 
 ```text
 src/client.cpp (cpp)
@@ -37,7 +52,7 @@ src/client.cpp (cpp)
 
 Status: **0.1.x released CLI**.
 
-The current crate provides a working Rust CLI with Markdown, Rust, C, C++, Java, JavaScript, and TypeScript structure views. Rust, C/C++, Java, and JS/TS parsing use tree-sitter grammars; Markdown parsing is still a lightweight line-oriented outline.
+The current crate provides a working Rust CLI with Markdown, Rust, C, C++, Java, Swift, Objective-C, JavaScript, and TypeScript structure views. Rust, C/C++, Java, Swift, Objective-C, and JS/TS parsing use tree-sitter grammars; Markdown parsing is still a lightweight line-oriented outline.
 
 ## Installation
 
@@ -181,7 +196,8 @@ Good triggers:
   large enough that a structural map can avoid broad reads;
 - the target symbol, section, test, or implementation area is only approximate
   and text search does not identify a tight range;
-- several candidate Rust, C/C++, Java, JavaScript, TypeScript, or Markdown
+- several candidate Rust, C/C++, Java, Swift, Objective-C, JavaScript,
+  TypeScript, or Markdown
   files or symbols need quick triage before choosing exact ranges;
 - a patch changes parser-visible structure and the resulting outline should be
   checked.
@@ -199,6 +215,8 @@ sview README.md src/lib.rs --depth 1
 sview src/lib.rs --depth 1 --max-nodes 40
 sview src/client.cpp --depth 2
 sview app/src/main/java/com/example/MainActivity.java --depth 2
+sview Sources/App/Client.swift --depth 2
+sview Sources/App/Client.m --depth 2
 sview tests/fixtures/typescript_sample.ts --depth 2
 sview tests/fixtures/javascript_sample.js tests/fixtures/tsx_sample.tsx --json
 sview src/lib.rs --json --depth 2
@@ -249,7 +267,7 @@ Current implementation dependencies:
 
 - `clap` for CLI parsing;
 - `serde` / `serde_json` for output contracts;
-- `tree-sitter`, `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-rust`, `tree-sitter-java`, `tree-sitter-javascript`, and `tree-sitter-typescript` for code outlines.
+- `tree-sitter`, `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-rust`, `tree-sitter-java`, `tree-sitter-swift`, `tree-sitter-objc`, `tree-sitter-javascript`, and `tree-sitter-typescript` for code outlines.
 
 Possible future dependencies include more `tree-sitter` grammars for additional languages and `pulldown-cmark` or another Markdown parser for richer document outlines.
 

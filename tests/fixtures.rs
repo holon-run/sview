@@ -62,6 +62,55 @@ fn cpp_fixture_covers_namespaces_classes_methods_and_functions() {
 }
 
 #[test]
+fn swift_fixture_covers_apple_source_shapes() {
+    let view = analyze_source(
+        "tests/fixtures/swift_sample.swift",
+        Language::Swift,
+        include_str!("fixtures/swift_sample.swift"),
+        80,
+    );
+
+    assert_node(&view.nodes[0], "import", "Foundation", 1, 1);
+    assert_node(&view.nodes[1], "struct", "Client", 3, 13);
+    assert_node(&view.nodes[1].children[0], "property", "title", 4, 4);
+    assert_node(&view.nodes[1].children[1], "initializer", "init", 6, 8);
+    assert_node(&view.nodes[1].children[2], "function", "fetch", 10, 12);
+    assert_node(&view.nodes[2], "protocol", "Screen", 15, 18);
+    assert_node(&view.nodes[2].children[0], "property", "name", 16, 16);
+    assert_node(&view.nodes[2].children[1], "function", "render", 17, 17);
+    assert_node(&view.nodes[3], "extension", "Client", 20, 22);
+    assert_node(&view.nodes[3].children[0], "function", "reset", 21, 21);
+    assert_node(&view.nodes[4], "enum", "Mode", 24, 27);
+}
+
+#[test]
+fn objc_fixture_covers_interfaces_implementations_protocols_and_methods() {
+    let view = analyze_source(
+        "tests/fixtures/objc_sample.m",
+        Language::ObjectiveC,
+        include_str!("fixtures/objc_sample.m"),
+        80,
+    );
+
+    assert_node(&view.nodes[0], "import", "<Foundation/Foundation.h>", 1, 1);
+    assert_node(&view.nodes[1], "interface", "Client", 3, 7);
+    assert_node(&view.nodes[1].children[0], "property", "title", 4, 4);
+    assert_node(&view.nodes[1].children[1], "method", "initWithTitle:", 5, 5);
+    assert_node(&view.nodes[1].children[2], "method", "kind", 6, 6);
+    assert_node(&view.nodes[2], "implementation", "Client", 9, 17);
+    assert_node(
+        &view.nodes[2].children[0],
+        "method",
+        "initWithTitle:",
+        10,
+        12,
+    );
+    assert_node(&view.nodes[2].children[1], "method", "kind", 14, 16);
+    assert_node(&view.nodes[3], "protocol", "Screen", 19, 21);
+    assert_node(&view.nodes[3].children[0], "method", "render", 20, 20);
+}
+
+#[test]
 fn rust_fixture_covers_ast_shapes() {
     let view = analyze_source(
         "tests/fixtures/rust_sample.rs",

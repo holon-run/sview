@@ -30,7 +30,9 @@ fn language_label(language: Language) -> &'static str {
         Language::Java => "java",
         Language::JavaScript => "javascript",
         Language::Markdown => "markdown",
+        Language::ObjectiveC => "objective_c",
         Language::Rust => "rust",
+        Language::Swift => "swift",
         Language::TypeScript | Language::Tsx => "typescript",
         Language::Unknown => "unknown",
     }
