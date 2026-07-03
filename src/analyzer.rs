@@ -1,4 +1,5 @@
 use crate::{
+    cpp::analyze_cpp_like,
     java::analyze_java,
     javascript::analyze_javascript,
     markdown::analyze_markdown,
@@ -30,6 +31,8 @@ pub fn analyze_source(
     let line_count = source.lines().count().max(1);
     let nodes = if source.trim().is_empty() {
         Vec::new()
+    } else if matches!(language, Language::C | Language::Cpp) {
+        analyze_cpp_like(language, source, preview_len)
     } else if matches!(
         language,
         Language::JavaScript | Language::TypeScript | Language::Tsx
@@ -62,6 +65,8 @@ pub fn analyze_source(
 
 pub fn detect_language(path: &Path, source: &str) -> Language {
     match path.extension().and_then(|extension| extension.to_str()) {
+        Some("c" | "h") => Language::C,
+        Some("cc" | "cpp" | "cxx" | "hh" | "hpp" | "hxx") => Language::Cpp,
         Some("java") => Language::Java,
         Some("js" | "jsx") => Language::JavaScript,
         Some("md" | "markdown" | "mdown") => Language::Markdown,

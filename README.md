@@ -19,24 +19,25 @@ That is enough for small files, but it becomes expensive and fragile for large s
 agent -> sview -> compact structure view -> targeted reads / patches
 ```
 
-Java/Android source output uses the same contract for packages, imports,
-classes, interfaces, enums, fields, constructors, and methods:
+C/C++ and Java source output use the same contract for includes/packages,
+namespaces/classes, fields, constructors, functions, and methods:
 
 ```text
-app/src/main/java/com/example/MainActivity.java (java)
-├─ package com.example L1-1 — package com.example;
-├─ import android.app.Activity L3-3 — import android.app.Activity;
-└─ class MainActivity L5-16 — public class MainActivity extends Activity {
-   ├─ field title L6-6 — private String title;
-   ├─ constructor MainActivity L8-8 — public MainActivity() {}
-   └─ method onCreate L11-11 — protected void onCreate(Bundle state) {}
+src/client.cpp (cpp)
+├─ include <string> L1-1 — #include <string>
+└─ namespace demo L3-18 — namespace demo {
+   ├─ class Client L4-11 — class Client {
+   │  ├─ method Client L6-6 — Client() = default;
+   │  ├─ method fetch L7-7 — void fetch(int id);
+   │  └─ field name_ L10-10 — std::string name_;
+   └─ function add L17-17 — int add(int a, int b) { return a + b; }
 ```
 
 ## Project status
 
 Status: **0.1.x released CLI**.
 
-The current crate provides a working Rust CLI with Markdown, Rust, Java, JavaScript, and TypeScript structure views. Rust, Java, and JS/TS parsing use tree-sitter grammars; Markdown parsing is still a lightweight line-oriented outline.
+The current crate provides a working Rust CLI with Markdown, Rust, C, C++, Java, JavaScript, and TypeScript structure views. Rust, C/C++, Java, and JS/TS parsing use tree-sitter grammars; Markdown parsing is still a lightweight line-oriented outline.
 
 ## Installation
 
@@ -180,8 +181,8 @@ Good triggers:
   large enough that a structural map can avoid broad reads;
 - the target symbol, section, test, or implementation area is only approximate
   and text search does not identify a tight range;
-- several candidate Rust, Java, JavaScript, TypeScript, or Markdown files or symbols
-  need quick triage before choosing exact ranges;
+- several candidate Rust, C/C++, Java, JavaScript, TypeScript, or Markdown
+  files or symbols need quick triage before choosing exact ranges;
 - a patch changes parser-visible structure and the resulting outline should be
   checked.
 
@@ -196,6 +197,7 @@ Typical commands:
 sview README.md --depth 2
 sview README.md src/lib.rs --depth 1
 sview src/lib.rs --depth 1 --max-nodes 40
+sview src/client.cpp --depth 2
 sview app/src/main/java/com/example/MainActivity.java --depth 2
 sview tests/fixtures/typescript_sample.ts --depth 2
 sview tests/fixtures/javascript_sample.js tests/fixtures/tsx_sample.tsx --json
@@ -247,7 +249,7 @@ Current implementation dependencies:
 
 - `clap` for CLI parsing;
 - `serde` / `serde_json` for output contracts;
-- `tree-sitter`, `tree-sitter-rust`, `tree-sitter-java`, `tree-sitter-javascript`, and `tree-sitter-typescript` for code outlines.
+- `tree-sitter`, `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-rust`, `tree-sitter-java`, `tree-sitter-javascript`, and `tree-sitter-typescript` for code outlines.
 
 Possible future dependencies include more `tree-sitter` grammars for additional languages and `pulldown-cmark` or another Markdown parser for richer document outlines.
 

@@ -25,6 +25,8 @@ pub fn render_text(view: &StructureView, options: &RenderOptions) -> String {
 
 fn language_label(language: Language) -> &'static str {
     match language {
+        Language::C => "c",
+        Language::Cpp => "cpp",
         Language::Java => "java",
         Language::JavaScript => "javascript",
         Language::Markdown => "markdown",

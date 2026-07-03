@@ -109,3 +109,25 @@ fn emits_text_for_java() {
         .stdout(predicate::str::contains("└─ class MainActivity L3-5"))
         .stdout(predicate::str::contains("method onCreate L4-4"));
 }
+
+#[test]
+fn emits_text_for_cpp() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("client.cpp");
+    fs::write(
+        &path,
+        "#include <string>\n\nnamespace demo {\nclass Client {\npublic:\n  void fetch();\n};\n}\n",
+    )
+    .unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .arg(path.to_str().unwrap())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("client.cpp (cpp)"))
+        .stdout(predicate::str::contains("├─ include <string> L1-1"))
+        .stdout(predicate::str::contains("└─ namespace demo L3-8"))
+        .stdout(predicate::str::contains("class Client L4-7"))
+        .stdout(predicate::str::contains("method fetch L6-6"));
+}

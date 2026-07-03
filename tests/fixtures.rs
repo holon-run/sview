@@ -1,6 +1,67 @@
 use sview::{analyze_source, Language, Node};
 
 #[test]
+fn c_fixture_covers_includes_types_fields_and_functions() {
+    let view = analyze_source(
+        "tests/fixtures/c_sample.c",
+        Language::C,
+        include_str!("fixtures/c_sample.c"),
+        80,
+    );
+
+    assert_node(&view.nodes[0], "include", "<stdio.h>", 1, 1);
+    assert_node(&view.nodes[1], "struct", "Client", 3, 6);
+    assert_node(&view.nodes[1].children[0], "field", "id", 4, 4);
+    assert_node(&view.nodes[1].children[1], "field", "name", 5, 5);
+    assert_node(&view.nodes[2], "enum", "Mode", 8, 11);
+    assert_node(&view.nodes[3], "function", "client_create", 13, 15);
+}
+
+#[test]
+fn cpp_fixture_covers_namespaces_classes_methods_and_functions() {
+    let view = analyze_source(
+        "tests/fixtures/cpp_sample.cpp",
+        Language::Cpp,
+        include_str!("fixtures/cpp_sample.cpp"),
+        80,
+    );
+
+    assert_node(&view.nodes[0], "include", "<string>", 1, 1);
+    assert_node(&view.nodes[1], "namespace", "demo", 3, 18);
+    assert_node(&view.nodes[1].children[0], "class", "Client", 4, 11);
+    assert_node(
+        &view.nodes[1].children[0].children[0],
+        "method",
+        "Client",
+        6,
+        6,
+    );
+    assert_node(
+        &view.nodes[1].children[0].children[1],
+        "method",
+        "fetch",
+        7,
+        7,
+    );
+    assert_node(
+        &view.nodes[1].children[0].children[2],
+        "field",
+        "name_",
+        10,
+        10,
+    );
+    assert_node(
+        &view.nodes[1].children[1],
+        "function",
+        "Client::fetch",
+        13,
+        13,
+    );
+    assert_node(&view.nodes[1].children[2], "enum", "Mode", 15, 15);
+    assert_node(&view.nodes[1].children[3], "function", "add", 17, 17);
+}
+
+#[test]
 fn rust_fixture_covers_ast_shapes() {
     let view = analyze_source(
         "tests/fixtures/rust_sample.rs",

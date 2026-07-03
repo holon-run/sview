@@ -1,4 +1,5 @@
 mod analyzer;
+mod cpp;
 mod java;
 mod javascript;
 mod markdown;
@@ -32,6 +33,19 @@ mod tests {
             detect_language(Path::new("src/MainActivity.java"), ""),
             Language::Java
         );
+        assert_eq!(detect_language(Path::new("src/client.c"), ""), Language::C);
+        assert_eq!(
+            detect_language(Path::new("include/client.h"), ""),
+            Language::C
+        );
+        assert_eq!(
+            detect_language(Path::new("src/client.cpp"), ""),
+            Language::Cpp
+        );
+        assert_eq!(
+            detect_language(Path::new("include/client.hpp"), ""),
+            Language::Cpp
+        );
         assert_eq!(
             detect_language(Path::new("src/app.ts"), ""),
             Language::TypeScript
@@ -59,6 +73,8 @@ mod tests {
             "\"javascript\""
         );
         assert_eq!(serde_json::to_string(&Language::Java).unwrap(), "\"java\"");
+        assert_eq!(serde_json::to_string(&Language::C).unwrap(), "\"c\"");
+        assert_eq!(serde_json::to_string(&Language::Cpp).unwrap(), "\"cpp\"");
         assert_eq!(
             serde_json::to_string(&Language::TypeScript).unwrap(),
             "\"typescript\""
