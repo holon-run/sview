@@ -103,7 +103,7 @@ jobs:
           cat > release-notes.md <<EOF
           ## sview ${GITHUB_REF_NAME}
 
-          This patch release adds prebuilt GitHub Release binaries and Homebrew tap support for \`sview\`.
+          This patch release expands language coverage for \`sview\` with Java, C/C++, Swift, Objective-C, and Kotlin/Android structure support.
 
           Supported binary assets:
 
