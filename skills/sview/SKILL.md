@@ -37,7 +37,7 @@ cargo install --path .
 
 ## When to use
 
-- Before reading an unfamiliar Markdown, Rust, JavaScript, or TypeScript file mostly end-to-end, especially when it is large enough that a structural map can avoid broad reads.
+- Before reading an unfamiliar Markdown, Rust, C/C++, Java, Kotlin/Android, Swift, Objective-C, JavaScript, or TypeScript file mostly end-to-end, especially when it is large enough that a structural map can avoid broad reads.
 - Before editing a symbol, section, or test when only its approximate location is known and text search does not identify a tight range.
 - When several candidate files or symbols need quick triage before choosing exact ranges.
 - After parser changes, to inspect representative project files and confirm the outline remains useful.
@@ -59,10 +59,18 @@ cargo install --path .
 
 ## Commands
 
+Supported structure views currently include Markdown, Rust, C, C++, Java,
+Kotlin/Android, Swift, Objective-C, JavaScript, TypeScript, and TSX.
+
 ```bash
 sview README.md --depth 2
 sview README.md src/lib.rs --depth 1
 sview src/lib.rs --depth 1 --max-nodes 40
+sview src/client.cpp --depth 2
+sview app/src/main/java/com/example/MainActivity.java --depth 2
+sview app/src/main/java/com/example/MainActivity.kt --depth 2
+sview Sources/App/Client.swift --depth 2
+sview Sources/App/Client.m --depth 2
 sview tests/fixtures/typescript_sample.ts --depth 2
 sview tests/fixtures/javascript_sample.js tests/fixtures/tsx_sample.tsx --json
 sview path/to/file.rs --json --depth 2
@@ -89,6 +97,19 @@ tests/fixtures/typescript_sample.ts (typescript)
 ```
 
 Use the reported `start_line` / `end_line` ranges to choose the next focused `sed -n '<start>,<end>p'` or patch target.
+
+Java/Kotlin/Android source views include packages, imports, classes,
+interfaces, constructors, fields/properties, functions, and methods:
+
+```text
+app/src/main/java/com/example/MainActivity.kt (kotlin)
+├─ package com.example.app L1-1 — package com.example.app
+├─ import android.app.Activity L3-3 — import android.app.Activity
+└─ class MainActivity L18-28 — class MainActivity private constructor(
+   ├─ constructor MainActivity L18-20 — class MainActivity private constructor(
+   ├─ property title L21-21 — var title: String = "Home"
+   └─ function onCreate L25-27 — override fun onCreate() {
+```
 
 ## Expectations
 
