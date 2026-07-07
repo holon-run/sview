@@ -213,8 +213,8 @@ Good triggers:
   large enough that a structural map can avoid broad reads;
 - the target symbol, section, test, or implementation area is only approximate
   and text search does not identify a tight range;
-- several candidate Rust, C/C++, Java, Swift, Objective-C, JavaScript,
-  TypeScript, or Markdown
+- several candidate Rust, C/C++, Java, Kotlin/Android, Swift, Objective-C,
+  JavaScript, TypeScript, or Markdown
   files or symbols need quick triage before choosing exact ranges;
 - a patch changes parser-visible structure and the resulting outline should be
   checked.
@@ -232,6 +232,7 @@ sview README.md src/lib.rs --depth 1
 sview src/lib.rs --depth 1 --max-nodes 40
 sview src/client.cpp --depth 2
 sview app/src/main/java/com/example/MainActivity.java --depth 2
+sview app/src/main/java/com/example/MainActivity.kt --depth 2
 sview Sources/App/Client.swift --depth 2
 sview Sources/App/Client.m --depth 2
 sview tests/fixtures/typescript_sample.ts --depth 2
