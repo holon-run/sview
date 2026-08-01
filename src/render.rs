@@ -59,8 +59,12 @@ fn render_node(
         "{prefix}{connector} {} {name} L{}-{}",
         node.kind, node.start_line, node.end_line
     ));
-    if let Some(preview) = text_preview(node) {
-        out.push_str(&format!(" — {preview}"));
+    let suppress_preview =
+        options.no_preview || (depth > 1 && matches!(node.kind.as_str(), "list" | "code_block"));
+    if !suppress_preview {
+        if let Some(preview) = text_preview(node) {
+            out.push_str(&format!(" — {preview}"));
+        }
     }
     out.push('\n');
 
@@ -96,5 +100,12 @@ fn text_preview(node: &Node) -> Option<&str> {
         None
     } else {
         Some(preview)
+    }
+}
+
+pub fn strip_previews(nodes: &mut [Node]) {
+    for node in nodes.iter_mut() {
+        node.preview = None;
+        strip_previews(&mut node.children);
     }
 }

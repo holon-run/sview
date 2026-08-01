@@ -46,4 +46,5 @@ pub struct Node {
 pub struct RenderOptions {
     pub max_depth: Option<usize>,
     pub max_nodes: usize,
+    pub no_preview: bool,
 }

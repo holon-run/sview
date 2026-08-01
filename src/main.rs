@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
-use sview::{analyze_file, render_text, RenderOptions};
+use sview::{analyze_file, render_text, strip_previews, RenderOptions};
 
 #[derive(Debug, Parser)]
 #[command(version, about)]
@@ -29,6 +29,10 @@ struct Cli {
     /// Maximum preview length per node.
     #[arg(long, default_value_t = 120)]
     preview_len: usize,
+
+    /// Suppress preview text; output only the structural skeleton.
+    #[arg(long)]
+    no_preview: bool,
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -39,7 +43,7 @@ enum OutputFormat {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let views = cli
+    let mut views = cli
         .paths
         .iter()
         .map(|path| analyze_file(path, cli.preview_len))
@@ -47,7 +51,14 @@ fn main() -> Result<()> {
     let options = RenderOptions {
         max_depth: cli.depth,
         max_nodes: cli.max_nodes,
+        no_preview: cli.no_preview,
     };
+
+    if cli.no_preview {
+        for view in &mut views {
+            strip_previews(&mut view.nodes);
+        }
+    }
 
     if cli.json || matches!(cli.format, OutputFormat::Json) {
         if views.len() == 1 {

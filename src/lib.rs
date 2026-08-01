@@ -14,7 +14,7 @@ mod util;
 
 pub use analyzer::{analyze_file, analyze_source, detect_language};
 pub use model::{Language, Node, RenderOptions, StructureView};
-pub use render::render_text;
+pub use render::{render_text, strip_previews};
 pub use util::truncate_preview;
 
 #[cfg(test)]
@@ -162,6 +162,7 @@ mod tests {
             &RenderOptions {
                 max_depth: None,
                 max_nodes: 20,
+                no_preview: false,
             },
         );
 
@@ -169,6 +170,61 @@ mod tests {
             output,
             "README.md (markdown)\n└─ heading Intro L1-3\n   └─ heading Details L3-3\n"
         );
+    }
+
+    #[test]
+    fn markdown_code_block_has_no_preview() {
+        let source = "# Title\n\n```rust\nfn main() {}\n```\n";
+        let view = analyze_source("README.md", Language::Markdown, source, 40);
+        let code_block = &view.nodes[0].children[0];
+        assert_eq!(code_block.kind, "code_block");
+        assert_eq!(code_block.preview, None);
+    }
+
+    #[test]
+    fn no_preview_suppresses_all_previews() {
+        let source = "hello\nworld\n";
+        let view = analyze_source("example.txt", Language::Unknown, source, 20);
+        let output = render_text(
+            &view,
+            &RenderOptions {
+                max_depth: None,
+                max_nodes: 20,
+                no_preview: true,
+            },
+        );
+        assert!(!output.contains("— hello"));
+    }
+
+    #[test]
+    fn markdown_suppresses_list_preview_at_depth_above_one() {
+        let source = "# Top\n\n## Sub\n\n- item one\n- item two\n";
+        let view = analyze_source("README.md", Language::Markdown, source, 40);
+        let output = render_text(
+            &view,
+            &RenderOptions {
+                max_depth: None,
+                max_nodes: 20,
+                no_preview: false,
+            },
+        );
+        assert!(output.contains("list"));
+        assert!(!output.contains("item one"));
+    }
+
+    #[test]
+    fn markdown_keeps_list_preview_at_depth_one() {
+        let source = "# Top\n\n- item one\n- item two\n";
+        let view = analyze_source("README.md", Language::Markdown, source, 40);
+        let output = render_text(
+            &view,
+            &RenderOptions {
+                max_depth: None,
+                max_nodes: 20,
+                no_preview: false,
+            },
+        );
+        assert!(output.contains("item one"));
     }
 
     #[test]

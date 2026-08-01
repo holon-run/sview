@@ -83,7 +83,7 @@ pub(crate) fn analyze_markdown(source: &str, preview_len: usize) -> Vec<Node> {
                     name: code_block_name(line),
                     start_line,
                     end_line,
-                    preview: Some(truncate_preview(line.trim(), preview_len)),
+                    preview: None,
                     children: Vec::new(),
                 },
             });

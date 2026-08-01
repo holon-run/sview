@@ -198,3 +198,33 @@ fn emits_text_for_objective_c() {
         .stdout(predicate::str::contains("property title L4-4"))
         .stdout(predicate::str::contains("method render L5-5"));
 }
+
+#[test]
+fn no_preview_suppresses_previews_in_text() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("sample.txt");
+    fs::write(&path, "hello\nworld\n").unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .args([path.to_str().unwrap(), "--no-preview"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("file"))
+        .stdout(predicate::str::contains("hello").not());
+}
+
+#[test]
+fn no_preview_suppresses_previews_in_json() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("sample.txt");
+    fs::write(&path, "hello\nworld\n").unwrap();
+
+    Command::cargo_bin("sview")
+        .unwrap()
+        .args([path.to_str().unwrap(), "--json", "--no-preview"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"kind\": \"file\""))
+        .stdout(predicate::str::contains("preview").not());
+}
