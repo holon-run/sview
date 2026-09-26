@@ -70,6 +70,29 @@ fn emits_json_array_for_multiple_files() {
 }
 
 #[test]
+fn emits_text_for_a_git_object_path() {
+    Command::cargo_bin("sview")
+        .unwrap()
+        .arg("HEAD:tests/fixtures/rust_sample.rs")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "HEAD:tests/fixtures/rust_sample.rs (rust)",
+        ))
+        .stdout(predicate::str::contains("struct Client"));
+}
+
+#[test]
+fn reports_git_object_read_errors() {
+    Command::cargo_bin("sview")
+        .unwrap()
+        .arg("HEAD:does/not/exist.rs")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failed to read Git object"));
+}
+
+#[test]
 fn emits_text_for_typescript() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("app.ts");

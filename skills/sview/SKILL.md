@@ -74,7 +74,13 @@ sview Sources/App/Client.m --depth 2
 sview tests/fixtures/typescript_sample.ts --depth 2
 sview tests/fixtures/javascript_sample.js tests/fixtures/tsx_sample.tsx --json
 sview path/to/file.rs --json --depth 2
+sview HEAD:src/lib.rs --depth 2
+sview v0.1.3:README.md --json
 ```
+
+Inside a Git repository, use `REV:path` to inspect a committed file without
+checking it out. The revision is read with Git, while the output keeps the
+original `REV:path` label.
 
 Default text output is a compact tree outline, for example:
 

@@ -10,12 +10,11 @@ use crate::{
     swift::analyze_swift,
     util::{file_name, first_non_empty_preview},
 };
-use anyhow::{Context, Result};
-use std::{fs, path::Path};
+use anyhow::{bail, Context, Result};
+use std::{fs, path::Path, process::Command};
 
 pub fn analyze_file(path: &Path, preview_len: usize) -> Result<StructureView> {
-    let source =
-        fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let source = read_source(path)?;
     let language = detect_language(path, &source);
     Ok(analyze_source(
         path.to_string_lossy().as_ref(),
@@ -23,6 +22,34 @@ pub fn analyze_file(path: &Path, preview_len: usize) -> Result<StructureView> {
         &source,
         preview_len,
     ))
+}
+
+fn read_source(path: &Path) -> Result<String> {
+    if path.is_file() {
+        return fs::read_to_string(path)
+            .with_context(|| format!("failed to read {}", path.display()));
+    }
+
+    let Some(spec) = path.to_str().filter(|value| value.contains(':')) else {
+        return fs::read_to_string(path)
+            .with_context(|| format!("failed to read {}", path.display()));
+    };
+
+    let output = Command::new("git")
+        .args(["cat-file", "blob", spec])
+        .output()
+        .with_context(|| format!("failed to invoke git for {}", path.display()))?;
+    if !output.status.success() {
+        let error = String::from_utf8_lossy(&output.stderr);
+        let detail = error.trim();
+        if detail.is_empty() {
+            bail!("failed to read Git object {}", spec);
+        }
+        bail!("failed to read Git object {}: {}", spec, detail);
+    }
+
+    String::from_utf8(output.stdout)
+        .with_context(|| format!("Git object {} is not valid UTF-8", spec))
 }
 
 pub fn analyze_source(

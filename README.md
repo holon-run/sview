@@ -102,6 +102,19 @@ Or install from the repository checkout:
 cargo install --path .
 ```
 
+When running inside a Git repository, `sview` can inspect a committed file
+without checking it out by using Git's `REV:path` syntax:
+
+```bash
+sview HEAD:src/lib.rs
+sview v0.1.3:README.md
+sview HEAD~2:src/main.rs --json
+```
+
+The Git revision is resolved with `git cat-file blob`; the original
+`REV:path` is preserved in the output and the language is detected from the
+repository path.
+
 ## Design goals
 
 - **Agent-facing**: optimize output for downstream agents, not for human IDE UI.
